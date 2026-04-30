@@ -5,6 +5,11 @@ from app.routes.auth_routes import router as auth_router
 from app.routes.movie_routes import router as movie_router
 from app.routes.recommendation_routes import router as recommendation_router
 from app.routes.user_routes import router as user_router
+from app.database import Base, engine
+from app.models import *
+
+Base.metadata.create_all(bind=engine)
+app = FastAPI(...)
 
 app = FastAPI(
     title="ChalChitra API",
