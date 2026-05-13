@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_current_user
@@ -16,6 +16,16 @@ from app.schemas.review_schema import (
     MovieReviewItem,
     UserReviewItem
 )
+from app.schemas.watchlist_schema import (
+    WatchlistCreate,
+    WatchlistResponse,
+    WatchlistItem
+)
+from app.schemas.follow_schema import (
+    FollowCreate,
+    FollowResponse,
+    FollowItem
+)
 
 from app.services.rating_service import (
     create_or_update_rating,
@@ -27,6 +37,16 @@ from app.services.review_service import (
     get_reviews_for_movie,
     get_current_user_reviews,
     delete_current_user_review
+)
+from app.services.watchlist_service import (
+    add_or_update_watchlist,
+    get_current_user_watchlist,
+    remove_from_watchlist
+)
+from app.services.follow_service import (
+    follow_person,
+    get_current_user_follows,
+    unfollow_person
 )
 
 router = APIRouter(
@@ -145,4 +165,104 @@ def delete_review(
         db=db,
         current_user=current_user,
         tmdb_id=tmdb_id
+    )
+
+
+@router.post(
+    "/watchlist",
+    response_model=WatchlistResponse
+)
+def add_watchlist_item(
+    watchlist_data: WatchlistCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return add_or_update_watchlist(
+        db=db,
+        current_user=current_user,
+        tmdb_id=watchlist_data.tmdb_id,
+        status=watchlist_data.status
+    )
+
+
+@router.get(
+    "/watchlist/me",
+    response_model=list[WatchlistItem]
+)
+def my_watchlist(
+    status: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_current_user_watchlist(
+        db=db,
+        current_user=current_user,
+        status=status
+    )
+
+
+@router.delete(
+    "/watchlist/{tmdb_id}"
+)
+def delete_watchlist_item(
+    tmdb_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return remove_from_watchlist(
+        db=db,
+        current_user=current_user,
+        tmdb_id=tmdb_id
+    )
+
+
+@router.post(
+    "/follows",
+    response_model=FollowResponse
+)
+def follow_actor_or_director(
+    follow_data: FollowCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return follow_person(
+        db=db,
+        current_user=current_user,
+        person_id=follow_data.person_id,
+        follow_type=follow_data.type,
+        name=follow_data.name,
+        profile_url=follow_data.profile_url
+    )
+
+
+@router.get(
+    "/follows/me",
+    response_model=list[FollowItem]
+)
+def my_follows(
+    type: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_current_user_follows(
+        db=db,
+        current_user=current_user,
+        follow_type=type
+    )
+
+
+@router.delete(
+    "/follows/{person_id}"
+)
+def delete_follow(
+    person_id: int,
+    type: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return unfollow_person(
+        db=db,
+        current_user=current_user,
+        person_id=person_id,
+        follow_type=type
     )
