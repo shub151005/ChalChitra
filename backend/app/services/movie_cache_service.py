@@ -68,6 +68,7 @@ def save_or_update_detailed_movie(
         movie.language = movie_data.get("language")
         movie.release_date = movie_data.get("release_date")
         movie.rating = movie_data.get("rating")
+        movie.popularity = movie_data.get("popularity")
         movie.runtime = movie_data.get("runtime")
         movie.genres = movie_data.get("genres")
         movie.directors = movie_data.get("directors")
@@ -85,6 +86,7 @@ def save_or_update_detailed_movie(
             language=movie_data.get("language"),
             release_date=movie_data.get("release_date"),
             rating=movie_data.get("rating"),
+            popularity=movie_data.get("popularity"),
             runtime=movie_data.get("runtime"),
             genres=movie_data.get("genres"),
             directors=movie_data.get("directors"),
@@ -129,6 +131,7 @@ def movie_to_detail_response(movie: Movie):
         "language": movie.language,
         "release_date": movie.release_date,
         "rating": movie.rating,
+        "popularity": movie.popularity,
         "runtime": movie.runtime,
         "genres": movie.genres or [],
         "directors": movie.directors or [],
@@ -136,3 +139,24 @@ def movie_to_detail_response(movie: Movie):
         "cast": movie.cast_members or [],
         "details_cached": movie.details_cached
     }
+
+def is_detailed_cache_complete(movie: Movie):
+    if not movie:
+        return False
+
+    if not movie.details_cached:
+        return False
+
+    if movie.popularity is None:
+        return False
+
+    if not movie.genres:
+        return False
+
+    if not movie.directors:
+        return False
+
+    if not movie.cast_members:
+        return False
+
+    return True

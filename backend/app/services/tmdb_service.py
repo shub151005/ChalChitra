@@ -144,23 +144,24 @@ def get_movie_details(tmdb_id: int):
     ]
 
     return {
-        "tmdb_id": movie.get("id"),
-        "title": movie.get("title"),
-        "original_title": movie.get("original_title"),
-        "description": movie.get("overview"),
-        "poster_url": build_poster_url(movie.get("poster_path")),
-        "backdrop_url": build_backdrop_url(movie.get("backdrop_path")),
-        "language": movie.get("original_language"),
-        "release_date": movie.get("release_date"),
-        "rating": movie.get("vote_average"),
-        "runtime": movie.get("runtime"),
-        "genres": [
-            genre.get("name")
-            for genre in movie.get("genres", [])
-        ],
-        "directors": directors,
-        "writers": writers,
-        "cast": cast
+    "tmdb_id": movie.get("id"),
+    "title": movie.get("title"),
+    "original_title": movie.get("original_title"),
+    "description": movie.get("overview"),
+    "poster_url": build_poster_url(movie.get("poster_path")),
+    "backdrop_url": build_backdrop_url(movie.get("backdrop_path")),
+    "language": movie.get("original_language"),
+    "release_date": movie.get("release_date"),
+    "rating": movie.get("vote_average"),
+    "popularity": movie.get("popularity"),
+    "runtime": movie.get("runtime"),
+    "genres": [
+        genre.get("name")
+        for genre in movie.get("genres", [])
+    ],
+    "directors": directors,
+    "writers": writers,
+    "cast": cast
     }
 
 

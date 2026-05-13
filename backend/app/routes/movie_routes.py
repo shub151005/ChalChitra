@@ -12,7 +12,8 @@ from app.services.movie_cache_service import (
     get_movie_by_tmdb_id,
     save_or_update_basic_movie,
     save_or_update_detailed_movie,
-    movie_to_detail_response
+    movie_to_detail_response,
+    is_detailed_cache_complete
 )
 
 router = APIRouter(
@@ -93,7 +94,7 @@ def movie_details(
         tmdb_id=tmdb_id
     )
 
-    if cached_movie and cached_movie.details_cached:
+    if cached_movie and is_detailed_cache_complete(cached_movie):
         return movie_to_detail_response(cached_movie)
 
     movie_data = get_movie_details(tmdb_id)
