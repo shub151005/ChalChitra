@@ -3,6 +3,11 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.movie import Movie
+from app.models.user import User
+from app.models.rating import Rating
+from app.models.watchlist import Watchlist
+from app.models.follow import Follow
+
 from app.constants.weights import (
     RECOMMENDATION_WEIGHTS,
     HIDDEN_GEM_WEIGHTS
@@ -391,4 +396,408 @@ def get_hidden_gems_for_movie(
         "source_movie": movie_to_basic_response(source_movie),
         "returned": min(limit, len(hidden_gems)),
         "hidden_gems": hidden_gems[:limit]
+    }
+
+
+def get_user_source_movies(
+    db: Session,
+    current_user: User
+):
+    source_movies = []
+
+    ratings = db.query(Rating).filter(
+        Rating.user_id == current_user.id,
+        Rating.rating >= 7
+    ).all()
+
+    for rating in ratings:
+        if rating.movie and rating.movie.details_cached:
+            source_movies.append({
+                "movie": rating.movie,
+                "source_type": "high_rating",
+                "source_weight": rating.rating / 10
+            })
+
+    watchlist_items = db.query(Watchlist).filter(
+        Watchlist.user_id == current_user.id,
+        Watchlist.status.in_(["watch_later", "watching", "completed"])
+    ).all()
+
+    for item in watchlist_items:
+        if item.movie and item.movie.details_cached:
+            source_movies.append({
+                "movie": item.movie,
+                "source_type": "watchlist",
+                "source_weight": 0.75
+            })
+
+    unique_sources = {}
+
+    for item in source_movies:
+        movie_id = item["movie"].id
+
+        if movie_id not in unique_sources:
+            unique_sources[movie_id] = item
+        else:
+            unique_sources[movie_id]["source_weight"] = max(
+                unique_sources[movie_id]["source_weight"],
+                item["source_weight"]
+            )
+
+    return list(unique_sources.values())
+
+
+def get_user_interacted_movie_ids(
+    db: Session,
+    current_user: User
+):
+    movie_ids = set()
+
+    ratings = db.query(Rating).filter(
+        Rating.user_id == current_user.id
+    ).all()
+
+    for rating in ratings:
+        movie_ids.add(rating.movie_id)
+
+    watchlist_items = db.query(Watchlist).filter(
+        Watchlist.user_id == current_user.id
+    ).all()
+
+    for item in watchlist_items:
+        movie_ids.add(item.movie_id)
+
+    return movie_ids
+
+
+def get_user_followed_people_ids(
+    db: Session,
+    current_user: User,
+    follow_type: str
+):
+    follows = db.query(Follow).filter(
+        Follow.user_id == current_user.id,
+        Follow.type == follow_type
+    ).all()
+
+    return {
+        follow.person_id
+        for follow in follows
+    }
+
+
+def calculate_follow_boost(
+    candidate_movie: Movie,
+    followed_directors,
+    followed_actors
+):
+    candidate_directors = extract_people_ids(
+        candidate_movie.directors
+    )
+    candidate_actors = extract_people_ids(
+        candidate_movie.cast_members
+    )
+
+    director_boost = 0.0
+    actor_boost = 0.0
+
+    if candidate_directors.intersection(followed_directors):
+        director_boost = 0.15
+
+    if candidate_actors.intersection(followed_actors):
+        actor_boost = 0.10
+
+    return {
+        "director_follow_boost": director_boost,
+        "actor_follow_boost": actor_boost,
+        "total_follow_boost": director_boost + actor_boost
+    }
+
+
+def get_personalized_recommendations(
+    db: Session,
+    current_user: User,
+    limit: int = 10
+):
+    if limit < 1:
+        limit = 10
+
+    if limit > 50:
+        limit = 50
+
+    source_movies = get_user_source_movies(
+        db=db,
+        current_user=current_user
+    )
+
+    if not source_movies:
+        return {
+            "message": "Rate or add a few movies to your watchlist to get personalized recommendations.",
+            "returned": 0,
+            "recommendations": []
+        }
+
+    interacted_movie_ids = get_user_interacted_movie_ids(
+        db=db,
+        current_user=current_user
+    )
+
+    followed_directors = get_user_followed_people_ids(
+        db=db,
+        current_user=current_user,
+        follow_type="director"
+    )
+
+    followed_actors = get_user_followed_people_ids(
+        db=db,
+        current_user=current_user,
+        follow_type="actor"
+    )
+
+    candidate_movies = db.query(Movie).filter(
+        Movie.details_cached == True,
+        ~Movie.id.in_(interacted_movie_ids)
+    ).all()
+
+    if not candidate_movies:
+        return {
+            "returned": 0,
+            "recommendations": []
+        }
+
+    max_popularity = max(
+        [
+            movie.popularity or 0
+            for movie in candidate_movies
+        ]
+    )
+
+    scored_candidates = {}
+
+    for candidate in candidate_movies:
+        best_score = 0.0
+        best_breakdown = None
+        best_source = None
+
+        for source in source_movies:
+            similarity_data = calculate_movie_similarity(
+                source_movie=source["movie"],
+                candidate_movie=candidate,
+                max_popularity=max_popularity
+            )
+
+            if not similarity_data["valid_match"]:
+                continue
+
+            weighted_score = (
+                similarity_data["final_score"]
+                * source["source_weight"]
+            )
+
+            if weighted_score > best_score:
+                best_score = weighted_score
+                best_breakdown = similarity_data["score_breakdown"]
+                best_source = source
+
+        follow_boost = calculate_follow_boost(
+            candidate_movie=candidate,
+            followed_directors=followed_directors,
+            followed_actors=followed_actors
+        )
+
+        final_score = best_score + follow_boost["total_follow_boost"]
+
+        if final_score <= 0:
+            continue
+
+        scored_candidates[candidate.id] = {
+            "movie": movie_to_basic_response(candidate),
+            "personalized_score": round(final_score * 100, 2),
+            "score_breakdown": best_breakdown,
+            "follow_boost": follow_boost,
+            "based_on": {
+                "movie_title": best_source["movie"].title if best_source else None,
+                "source_type": best_source["source_type"] if best_source else "follow_boost"
+            },
+            "reason": "Recommended from your ratings, watchlist, and followed creators."
+        }
+
+    results = list(scored_candidates.values())
+
+    results.sort(
+        key=lambda item: item["personalized_score"],
+        reverse=True
+    )
+
+    return {
+        "returned": min(limit, len(results)),
+        "recommendations": results[:limit]
+    }
+
+
+def get_personalized_hidden_gems(
+    db: Session,
+    current_user: User,
+    limit: int = 10
+):
+    personalized = get_personalized_recommendations(
+        db=db,
+        current_user=current_user,
+        limit=50
+    )
+
+    recommendations = personalized.get("recommendations", [])
+
+    hidden_gems = []
+
+    if not recommendations:
+        return {
+            "returned": 0,
+            "hidden_gems": []
+        }
+
+    max_popularity = max(
+        [
+            item["movie"].get("popularity") or 0
+            for item in recommendations
+        ]
+    )
+
+    for item in recommendations:
+        movie = item["movie"]
+
+        popularity = movie.get("popularity") or 0
+        rating = movie.get("rating") or 0
+
+        popularity_score = normalize_popularity(
+            popularity,
+            max_popularity
+        )
+
+        rating_score = normalize_rating(rating)
+
+        hidden_gem_score = (
+            (item["personalized_score"] / 100) * HIDDEN_GEM_WEIGHTS["similarity"]
+            + rating_score * HIDDEN_GEM_WEIGHTS["rating"]
+            - popularity_score * HIDDEN_GEM_WEIGHTS["popularity_penalty"]
+        )
+
+        if hidden_gem_score <= 0:
+            continue
+
+        hidden_gems.append({
+            "movie": movie,
+            "hidden_gem_score": round(hidden_gem_score * 100, 2),
+            "personalized_score": item["personalized_score"],
+            "rating_score": round(rating_score * 100, 2),
+            "popularity_penalty": round(popularity_score * 100, 2),
+            "reason": "A personalized hidden gem based on your taste and lower mainstream popularity."
+        })
+
+    hidden_gems.sort(
+        key=lambda item: item["hidden_gem_score"],
+        reverse=True
+    )
+
+    return {
+        "returned": min(limit, len(hidden_gems)),
+        "hidden_gems": hidden_gems[:limit]
+    }
+
+
+def get_recommendations_from_followed_directors(
+    db: Session,
+    current_user: User,
+    limit: int = 10
+):
+    followed_directors = get_user_followed_people_ids(
+        db=db,
+        current_user=current_user,
+        follow_type="director"
+    )
+
+    if not followed_directors:
+        return {
+            "returned": 0,
+            "recommendations": []
+        }
+
+    interacted_movie_ids = get_user_interacted_movie_ids(
+        db=db,
+        current_user=current_user
+    )
+
+    movies = db.query(Movie).filter(
+        Movie.details_cached == True,
+        ~Movie.id.in_(interacted_movie_ids)
+    ).all()
+
+    results = []
+
+    for movie in movies:
+        director_ids = extract_people_ids(movie.directors)
+
+        if director_ids.intersection(followed_directors):
+            results.append({
+                "movie": movie_to_basic_response(movie),
+                "reason": "Recommended because you follow this movie's director."
+            })
+
+    results.sort(
+        key=lambda item: item["movie"].get("rating") or 0,
+        reverse=True
+    )
+
+    return {
+        "returned": min(limit, len(results)),
+        "recommendations": results[:limit]
+    }
+
+
+def get_recommendations_from_followed_actors(
+    db: Session,
+    current_user: User,
+    limit: int = 10
+):
+    followed_actors = get_user_followed_people_ids(
+        db=db,
+        current_user=current_user,
+        follow_type="actor"
+    )
+
+    if not followed_actors:
+        return {
+            "returned": 0,
+            "recommendations": []
+        }
+
+    interacted_movie_ids = get_user_interacted_movie_ids(
+        db=db,
+        current_user=current_user
+    )
+
+    movies = db.query(Movie).filter(
+        Movie.details_cached == True,
+        ~Movie.id.in_(interacted_movie_ids)
+    ).all()
+
+    results = []
+
+    for movie in movies:
+        actor_ids = extract_people_ids(movie.cast_members)
+
+        if actor_ids.intersection(followed_actors):
+            results.append({
+                "movie": movie_to_basic_response(movie),
+                "reason": "Recommended because you follow one of this movie's actors."
+            })
+
+    results.sort(
+        key=lambda item: item["movie"].get("rating") or 0,
+        reverse=True
+    )
+
+    return {
+        "returned": min(limit, len(results)),
+        "recommendations": results[:limit]
     }

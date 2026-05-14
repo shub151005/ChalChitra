@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_db
+from app.dependencies import get_db, get_current_user
+from app.models.user import User
+
 from app.services.recommendation_service import (
     get_movie_recommendations,
-    get_hidden_gems_for_movie
+    get_hidden_gems_for_movie,
+    get_personalized_recommendations,
+    get_personalized_hidden_gems,
+    get_recommendations_from_followed_directors,
+    get_recommendations_from_followed_actors
 )
 
 router = APIRouter(
@@ -42,5 +48,57 @@ def hidden_gems_by_movie(
     return get_hidden_gems_for_movie(
         db=db,
         tmdb_id=tmdb_id,
+        limit=limit
+    )
+
+
+@router.get("/me")
+def personalized_recommendations(
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_personalized_recommendations(
+        db=db,
+        current_user=current_user,
+        limit=limit
+    )
+
+
+@router.get("/me/hidden-gems")
+def personalized_hidden_gems(
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_personalized_hidden_gems(
+        db=db,
+        current_user=current_user,
+        limit=limit
+    )
+
+
+@router.get("/me/directors")
+def recommendations_from_directors(
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_recommendations_from_followed_directors(
+        db=db,
+        current_user=current_user,
+        limit=limit
+    )
+
+
+@router.get("/me/actors")
+def recommendations_from_actors(
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_recommendations_from_followed_actors(
+        db=db,
+        current_user=current_user,
         limit=limit
     )
