@@ -26,6 +26,12 @@ from app.schemas.follow_schema import (
     FollowResponse,
     FollowItem
 )
+from app.schemas.analytics_schema import (
+    TasteAnalyticsResponse,
+    GenrePreferenceItem,
+    LanguagePreferenceItem,
+    CreatorPreferenceItem
+)
 
 from app.services.rating_service import (
     create_or_update_rating,
@@ -47,6 +53,12 @@ from app.services.follow_service import (
     follow_person,
     get_current_user_follows,
     unfollow_person
+)
+from app.services.analytics_service import (
+    calculate_user_taste_analytics,
+    get_user_genre_analytics,
+    get_user_language_analytics,
+    get_user_creator_analytics
 )
 
 router = APIRouter(
@@ -265,4 +277,57 @@ def delete_follow(
         current_user=current_user,
         person_id=person_id,
         follow_type=type
+    )
+
+
+@router.get(
+    "/analytics/me",
+    response_model=TasteAnalyticsResponse
+)
+def my_taste_analytics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return calculate_user_taste_analytics(
+        db=db,
+        current_user=current_user
+    )
+
+
+@router.get(
+    "/analytics/me/genres"
+)
+def my_genre_analytics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_user_genre_analytics(
+        db=db,
+        current_user=current_user
+    )
+
+
+@router.get(
+    "/analytics/me/languages"
+)
+def my_language_analytics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_user_language_analytics(
+        db=db,
+        current_user=current_user
+    )
+
+
+@router.get(
+    "/analytics/me/creators"
+)
+def my_creator_analytics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_user_creator_analytics(
+        db=db,
+        current_user=current_user
     )
