@@ -30,34 +30,48 @@ def tmdb_get(endpoint, params=None):
     request_params = dict(params) if params else {}
     request_params["api_key"] = settings.TMDB_API_KEY
 
+    headers = {
+        "User-Agent": "ChalChitra/1.0"
+    }
+
     last_error = None
 
-    for attempt in range(2):
+    for attempt in range(4):
         try:
             response = requests.get(
                 f"{TMDB_BASE_URL}{endpoint}",
                 params=request_params,
-                timeout=20
+                headers=headers,
+                timeout=(5, 30)
             )
 
+            if response.status_code == 429:
+                time.sleep(2 + attempt)
+                continue
+
             if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=response.json().get(
+                try:
+                    error_message = response.json().get(
                         "status_message",
                         "TMDb API request failed"
                     )
+                except Exception:
+                    error_message = "TMDb API request failed"
+
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=error_message
                 )
 
             return response.json()
 
         except requests.RequestException as error:
             last_error = error
-            time.sleep(1)
+            time.sleep(2 + attempt)
 
     raise HTTPException(
         status_code=503,
-        detail=f"TMDb service unavailable: {str(last_error)}"
+        detail=f"TMDb service unavailable after retries: {str(last_error)}"
     )
 
 
@@ -144,24 +158,24 @@ def get_movie_details(tmdb_id: int):
     ]
 
     return {
-    "tmdb_id": movie.get("id"),
-    "title": movie.get("title"),
-    "original_title": movie.get("original_title"),
-    "description": movie.get("overview"),
-    "poster_url": build_poster_url(movie.get("poster_path")),
-    "backdrop_url": build_backdrop_url(movie.get("backdrop_path")),
-    "language": movie.get("original_language"),
-    "release_date": movie.get("release_date"),
-    "rating": movie.get("vote_average"),
-    "popularity": movie.get("popularity"),
-    "runtime": movie.get("runtime"),
-    "genres": [
-        genre.get("name")
-        for genre in movie.get("genres", [])
-    ],
-    "directors": directors,
-    "writers": writers,
-    "cast": cast
+        "tmdb_id": movie.get("id"),
+        "title": movie.get("title"),
+        "original_title": movie.get("original_title"),
+        "description": movie.get("overview"),
+        "poster_url": build_poster_url(movie.get("poster_path")),
+        "backdrop_url": build_backdrop_url(movie.get("backdrop_path")),
+        "language": movie.get("original_language"),
+        "release_date": movie.get("release_date"),
+        "rating": movie.get("vote_average"),
+        "popularity": movie.get("popularity"),
+        "runtime": movie.get("runtime"),
+        "genres": [
+            genre.get("name")
+            for genre in movie.get("genres", [])
+        ],
+        "directors": directors,
+        "writers": writers,
+        "cast": cast
     }
 
 
@@ -184,5 +198,113 @@ def get_top_rated_movies(page: int = 1):
 
     return [
         format_movie(movie)
-        for movie in data.get("results", [])[:10]
+        for movie in data.get("results", [])
     ]
+
+
+def get_popular_movies(page: int = 1):
+    data = tmdb_get(
+        "/movie/popular",
+        {
+            "page": page
+        }
+    )
+
+    return [
+        format_movie(movie)
+        for movie in data.get("results", [])
+    ]
+
+
+def discover_movies_by_genre(
+    genre_id: int,
+    page: int = 1
+):
+    data = tmdb_get(
+        "/discover/movie",
+        {
+            "with_genres": genre_id,
+            "page": page,
+            "sort_by": "vote_average.desc",
+            "vote_count.gte": 100,
+            "include_adult": False
+        }
+    )
+
+    return [
+        format_movie(movie)
+        for movie in data.get("results", [])
+    ]
+
+
+def discover_movies_by_language(
+    language_code: str,
+    page: int = 1
+):
+    data = tmdb_get(
+        "/discover/movie",
+        {
+            "with_original_language": language_code,
+            "page": page,
+            "sort_by": "vote_average.desc",
+            "vote_count.gte": 50,
+            "include_adult": False
+        }
+    )
+
+    return [
+        format_movie(movie)
+        for movie in data.get("results", [])
+    ]
+
+
+def get_similar_movies(tmdb_id: int, page: int = 1):
+    data = tmdb_get(
+        f"/movie/{tmdb_id}/similar",
+        {
+            "page": page
+        }
+    )
+
+    return [
+        format_movie(movie)
+        for movie in data.get("results", [])
+    ]
+
+
+def get_tmdb_movie_recommendations(
+    tmdb_id: int,
+    page: int = 1
+):
+    data = tmdb_get(
+        f"/movie/{tmdb_id}/recommendations",
+        {
+            "page": page
+        }
+    )
+
+    return [
+        format_movie(movie)
+        for movie in data.get("results", [])
+    ]
+
+
+def get_person_movie_credits(person_id: int):
+    data = tmdb_get(
+        f"/person/{person_id}/movie_credits"
+    )
+
+    cast_movies = [
+        format_movie(movie)
+        for movie in data.get("cast", [])
+    ]
+
+    crew_movies = [
+        format_movie(movie)
+        for movie in data.get("crew", [])
+    ]
+
+    return {
+        "cast": cast_movies,
+        "crew": crew_movies
+    }
