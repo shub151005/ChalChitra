@@ -3,6 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 
+from difflib import SequenceMatcher
+
+from app.models.movie import Movie
+from app.services.movie_cache_service import movie_to_basic_response
+
 from app.services.tmdb_service import (
     search_movies,
     get_movie_details,
@@ -45,23 +50,40 @@ def movie_test():
 
 @router.get("/search")
 def search_movie(
-    query: str = Query(..., min_length=1),
+    query: str,
     page: int = 1,
     db: Session = Depends(get_db)
 ):
-    data = search_movies(
+    tmdb_response = search_movies(query, page)
+
+    if isinstance(tmdb_response, dict):
+        movies = tmdb_response.get("results", [])
+    else:
+        movies = tmdb_response
+
+    for movie in movies:
+        if isinstance(movie, dict):
+            save_or_update_basic_movie(
+                db=db,
+                movie_data=movie
+            )
+
+    if movies:
+        return {
+            "results": movies,
+            "search_type": "tmdb"
+        }
+
+    fuzzy_movies = fuzzy_local_movie_search(
+        db=db,
         query=query,
-        page=page
+        limit=12
     )
 
-    for movie in data.get("results", []):
-        save_or_update_basic_movie(
-            db=db,
-            movie_data=movie
-        )
-
-    return data
-
+    return {
+        "results": fuzzy_movies,
+        "search_type": "fuzzy_local"
+    }
 
 @router.get("/trending")
 def trending_movies(
@@ -232,3 +254,38 @@ def movie_details(
     )
 
     return movie_to_detail_response(saved_movie)
+
+def similarity_score(text_one: str, text_two: str):
+    if not text_one or not text_two:
+        return 0
+
+    return SequenceMatcher(
+        None,
+        text_one.lower().strip(),
+        text_two.lower().strip()
+    ).ratio()
+
+
+def fuzzy_local_movie_search(db: Session, query: str, limit: int = 12):
+    cached_movies = db.query(Movie).filter(Movie.title.isnot(None)).all()
+
+    scored_movies = []
+
+    for movie in cached_movies:
+        title_score = similarity_score(query, movie.title)
+
+        original_title_score = 0
+        if movie.original_title:
+            original_title_score = similarity_score(query, movie.original_title)
+
+        best_score = max(title_score, original_title_score)
+
+        if best_score >= 0.55:
+            scored_movies.append((best_score, movie))
+
+    scored_movies.sort(key=lambda item: item[0], reverse=True)
+
+    return [
+        movie_to_basic_response(movie)
+        for score, movie in scored_movies[:limit]
+    ]

@@ -13,16 +13,26 @@ const MovieCard = ({ movie, compact = false }) => {
     ? movie.release_date.slice(0, 4)
     : "N/A";
 
-  const rating =
-    typeof movie.rating === "number"
-      ? movie.rating.toFixed(1)
-      : "N/A";
+ const ratingValue =
+  movie.rating ||
+  movie.vote_average ||
+  movie.average_rating ||
+  null;
+
+const rating =
+  typeof ratingValue === "number"
+    ? ratingValue.toFixed(1)
+    : "N/A";
 
   return (
     <motion.div
       whileHover={{ y: -8, scale: 1.02 }}
       transition={{ duration: 0.25 }}
-      onClick={() => navigate(`/movie/${movie.tmdb_id}`)}
+      onClick={() => {
+  if (movie.tmdb_id) {
+    navigate(`/movie/${movie.tmdb_id}`);
+  }
+}}
       className={`group cursor-pointer overflow-hidden rounded-2xl border border-cinemaBorder bg-cinemaCard shadow-cardGlow transition hover:border-cinemaGold/50 ${
         compact ? "min-w-[160px] max-w-[160px]" : "w-full"
       }`}
@@ -57,7 +67,7 @@ const MovieCard = ({ movie, compact = false }) => {
 
       <div className="space-y-1 p-3">
         <h3 className="line-clamp-2 text-sm font-bold text-white">
-          {movie.title}
+          {movie.title || movie.original_title || "Untitled Movie"}
         </h3>
         <p className="text-xs text-cinemaDim">{year}</p>
       </div>
