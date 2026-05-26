@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Star, Globe2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const MovieCard = ({ movie }) => {
+const MovieCard = ({ movie, compact = false }) => {
   const navigate = useNavigate();
 
   if (!movie) {
@@ -13,12 +13,19 @@ const MovieCard = ({ movie }) => {
     ? movie.release_date.slice(0, 4)
     : "N/A";
 
+  const rating =
+    typeof movie.rating === "number"
+      ? movie.rating.toFixed(1)
+      : "N/A";
+
   return (
     <motion.div
       whileHover={{ y: -8, scale: 1.02 }}
       transition={{ duration: 0.25 }}
       onClick={() => navigate(`/movie/${movie.tmdb_id}`)}
-      className="group min-w-[160px] max-w-[160px] cursor-pointer overflow-hidden rounded-2xl border border-cinemaBorder bg-cinemaCard shadow-cardGlow transition hover:border-cinemaGold/50"
+      className={`group cursor-pointer overflow-hidden rounded-2xl border border-cinemaBorder bg-cinemaCard shadow-cardGlow transition hover:border-cinemaGold/50 ${
+        compact ? "min-w-[160px] max-w-[160px]" : "w-full"
+      }`}
     >
       <div className="relative aspect-[2/3] overflow-hidden bg-cinemaPanel">
         {movie.poster_url ? (
@@ -38,7 +45,7 @@ const MovieCard = ({ movie }) => {
         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
           <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-cinemaGold backdrop-blur">
             <Star size={12} fill="currentColor" />
-            {movie.rating ? movie.rating.toFixed(1) : "N/A"}
+            {rating}
           </span>
 
           <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-cinemaMuted backdrop-blur">

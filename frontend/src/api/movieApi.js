@@ -16,8 +16,13 @@ export const getMovieDetails = async (tmdbId) => {
   return response.data;
 };
 
-export const getTrendingMovies = async () => {
-  const response = await axiosClient.get("/movies/trending");
+export const getTrendingMovies = async (page = 1) => {
+  const response = await axiosClient.get("/movies/trending", {
+    params: {
+      page
+    }
+  });
+
   return response.data;
 };
 

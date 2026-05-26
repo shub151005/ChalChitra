@@ -179,12 +179,17 @@ def get_movie_details(tmdb_id: int):
     }
 
 
-def get_trending_movies():
-    data = tmdb_get("/trending/movie/week")
+def get_trending_movies(page: int = 1):
+    data = tmdb_get(
+        "/trending/movie/week",
+        {
+            "page": page
+        }
+    )
 
     return [
         format_movie(movie)
-        for movie in data.get("results", [])[:10]
+        for movie in data.get("results", [])
     ]
 
 

@@ -65,9 +65,10 @@ def search_movie(
 
 @router.get("/trending")
 def trending_movies(
+    page: int = 1,
     db: Session = Depends(get_db)
 ):
-    movies = get_trending_movies()
+    movies = get_trending_movies(page=page)    
 
     for movie in movies:
         save_or_update_basic_movie(
@@ -78,7 +79,6 @@ def trending_movies(
     return {
         "results": movies
     }
-
 
 @router.get("/top-rated")
 def top_rated_movies(
@@ -96,7 +96,6 @@ def top_rated_movies(
     return {
         "results": movies
     }
-
 
 @router.post("/catalog/seed")
 def seed_catalog(

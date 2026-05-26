@@ -44,6 +44,7 @@ const MovieRow = ({ title, subtitle, movies = [], onViewMore }) => {
           <MovieCard
             key={`${movie.tmdb_id}-${movie.title}`}
             movie={movie}
+            compact
           />
         ))}
       </div>
