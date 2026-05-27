@@ -1,3 +1,5 @@
+import RatingBox from "../components/movie/RatingBox";
+import ReviewBox from "../components/movie/ReviewBox";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -379,6 +381,25 @@ const MovieDetails = () => {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16 md:px-8">
+        <div className="mb-10 grid gap-5 lg:grid-cols-[420px_1fr]">
+  <RatingBox movie={movie} />
+
+  <div className="glass-panel rounded-3xl p-5">
+    <p className="text-xs font-bold uppercase tracking-[0.25em] text-cinemaGold">
+      Taste Impact
+    </p>
+
+    <h3 className="mt-3 font-display text-2xl font-bold text-white">
+      Why ratings matter
+    </h3>
+
+    <p className="mt-2 leading-7 text-cinemaMuted">
+      Your rating becomes one of the strongest signals for personalized recommendations.
+      ChalChitra uses it with genres, story similarity, directors, actors, watchlist
+      behavior, and hidden-gem discovery.
+    </p>
+  </div>
+</div>
         <div className="mb-10 grid gap-5 md:grid-cols-3">
           <StatCard
             title="Similarity Logic"
@@ -422,7 +443,7 @@ const MovieDetails = () => {
             />
           </>
         )}
-
+        <ReviewBox movie={movie} />
         {cast.length > 0 && (
           <section className="py-10">
             <div className="mb-5">

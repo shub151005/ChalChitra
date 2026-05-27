@@ -5,6 +5,16 @@ export const rateMovie = async (ratingData) => {
   return response.data;
 };
 
+export const getMyRatings = async () => {
+  const response = await axiosClient.get("/users/ratings/me");
+  return response.data;
+};
+
+export const getMovieRating = async (tmdbId) => {
+  const response = await axiosClient.get(`/users/ratings/movie/${tmdbId}`);
+  return response.data;
+};
+
 export const addOrUpdateWatchlist = async (watchlistData) => {
   const response = await axiosClient.post("/users/watchlist", watchlistData);
   return response.data;
@@ -22,6 +32,21 @@ export const removeFromWatchlist = async (tmdbId) => {
 
 export const createOrUpdateReview = async (reviewData) => {
   const response = await axiosClient.post("/users/reviews", reviewData);
+  return response.data;
+};
+
+export const getMyReviews = async () => {
+  const response = await axiosClient.get("/users/reviews/me");
+  return response.data;
+};
+
+export const getMovieReviews = async (tmdbId) => {
+  const response = await axiosClient.get(`/users/reviews/movie/${tmdbId}`);
+  return response.data;
+};
+
+export const deleteReview = async (tmdbId) => {
+  const response = await axiosClient.delete(`/users/reviews/${tmdbId}`);
   return response.data;
 };
 
