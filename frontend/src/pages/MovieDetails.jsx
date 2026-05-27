@@ -1,3 +1,4 @@
+import CreatorFollowPanel from "../components/movie/CreatorFollowPanel";
 import RatingBox from "../components/movie/RatingBox";
 import ReviewBox from "../components/movie/ReviewBox";
 import { useEffect, useMemo, useState } from "react";
@@ -443,7 +444,11 @@ const MovieDetails = () => {
             />
           </>
         )}
+
+        <CreatorFollowPanel directors={directors} cast={cast} />
+
         <ReviewBox movie={movie} />
+        
         {cast.length > 0 && (
           <section className="py-10">
             <div className="mb-5">

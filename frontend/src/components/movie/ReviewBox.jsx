@@ -54,7 +54,9 @@ const ReviewBox = ({ movie }) => {
   };
 
   const loadMovieReviews = async () => {
-    if (!movie?.tmdb_id) return;
+    if (!movie?.tmdb_id) {
+      return;
+    }
 
     try {
       setLoadingReviews(true);
@@ -69,7 +71,10 @@ const ReviewBox = ({ movie }) => {
   };
 
   const loadMyReview = async () => {
-    if (!isAuthenticated || !movie?.tmdb_id) return;
+    if (!isAuthenticated || !movie?.tmdb_id) {
+      setMyExistingReview(null);
+      return;
+    }
 
     try {
       const data = await getMyReviews();
@@ -84,17 +89,25 @@ const ReviewBox = ({ movie }) => {
         setReviewText(getReviewText(existing));
 
         const existingRating = getReviewRating(existing);
+
         if (existingRating) {
           setReviewRating(String(existingRating));
         }
+      } else {
+        setMyExistingReview(null);
+        setReviewText("");
+        setReviewRating("");
       }
     } catch (err) {
-      // No review yet is fine.
+      setMyExistingReview(null);
     }
   };
 
   const handleSubmitReview = async (event) => {
-    event.preventDefault();
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
 
     if (!isAuthenticated) {
       navigate("/login", {
@@ -128,6 +141,7 @@ const ReviewBox = ({ movie }) => {
       await createOrUpdateReview(payload);
 
       setMessage("Review saved successfully.");
+
       await loadMovieReviews();
       await loadMyReview();
 
@@ -144,8 +158,15 @@ const ReviewBox = ({ movie }) => {
     }
   };
 
-  const handleDeleteReview = async () => {
-    if (!isAuthenticated || !movie?.tmdb_id) return;
+  const handleDeleteReview = async (event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (!isAuthenticated || !movie?.tmdb_id) {
+      return;
+    }
 
     try {
       setDeletingReview(true);
@@ -196,10 +217,7 @@ const ReviewBox = ({ movie }) => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
-        <form
-          onSubmit={handleSubmitReview}
-          className="glass-panel rounded-3xl p-5"
-        >
+        <div className="glass-panel rounded-3xl p-5">
           <div className="mb-4 flex items-start gap-3">
             <div className="rounded-2xl border border-cinemaGold/20 bg-cinemaGold/10 p-3 text-cinemaGold">
               <MessageSquare size={22} />
@@ -247,7 +265,8 @@ const ReviewBox = ({ movie }) => {
 
           <div className="mt-4 flex flex-wrap gap-3">
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmitReview}
               disabled={savingReview}
               className="flex items-center gap-2 rounded-full bg-cinemaGold px-6 py-3 font-bold text-black transition hover:bg-cinemaGoldSoft disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -273,7 +292,7 @@ const ReviewBox = ({ movie }) => {
               {message}
             </p>
           )}
-        </form>
+        </div>
 
         <div className="glass-panel rounded-3xl p-5">
           <div className="mb-5 flex items-center justify-between gap-4">
@@ -297,11 +316,14 @@ const ReviewBox = ({ movie }) => {
               {reviews.map((review, index) => {
                 const text = getReviewText(review);
                 const rating = getReviewRating(review);
+
                 const reviewerName =
                   review?.user?.name ||
                   review?.user_name ||
                   review?.name ||
-                  (user?.id && review?.user_id === user.id ? user.name : "ChalChitra User");
+                  (user?.id && review?.user_id === user.id
+                    ? user.name
+                    : "ChalChitra User");
 
                 return (
                   <div

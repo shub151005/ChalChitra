@@ -55,6 +55,21 @@ export const followPerson = async (followData) => {
   return response.data;
 };
 
+export const getMyFollows = async () => {
+  const response = await axiosClient.get("/users/follows/me");
+  return response.data;
+};
+
+export const unfollowPerson = async (personId, type) => {
+  const response = await axiosClient.delete(`/users/follows/${personId}`, {
+    params: {
+      type
+    }
+  });
+
+  return response.data;
+};
+
 export const getMyAnalytics = async () => {
   const response = await axiosClient.get("/users/analytics/me");
   return response.data;
