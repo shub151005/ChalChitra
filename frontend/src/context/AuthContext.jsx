@@ -1,18 +1,32 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+
 import { getCurrentUser, loginUser, signupUser } from "../api/authApi";
 
 const AuthContext = createContext(null);
 
+const TOKEN_KEY = "chalchitra_token";
+
 export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem(TOKEN_KEY);
+  });
+
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  const token = localStorage.getItem("chalchitra_token");
+  const saveToken = (newToken) => {
+    localStorage.setItem(TOKEN_KEY, newToken);
+    setToken(newToken);
+  };
 
-  const isAuthenticated = Boolean(token && user);
+  const clearToken = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    setToken(null);
+    setUser(null);
+  };
 
   const loadUser = async () => {
-    const storedToken = localStorage.getItem("chalchitra_token");
+    const storedToken = localStorage.getItem(TOKEN_KEY);
 
     if (!storedToken) {
       setAuthLoading(false);
@@ -20,11 +34,12 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
+      setAuthLoading(true);
+
       const currentUser = await getCurrentUser();
       setUser(currentUser);
-    } catch (error) {
-      localStorage.removeItem("chalchitra_token");
-      setUser(null);
+    } catch (err) {
+      clearToken();
     } finally {
       setAuthLoading(false);
     }
@@ -33,7 +48,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const data = await loginUser(email, password);
 
-    localStorage.setItem("chalchitra_token", data.access_token);
+    const accessToken = data.access_token || data.token;
+
+    if (!accessToken) {
+      throw new Error("Login response did not include access token.");
+    }
+
+    saveToken(accessToken);
 
     const currentUser = await getCurrentUser();
     setUser(currentUser);
@@ -41,42 +62,48 @@ export const AuthProvider = ({ children }) => {
     return currentUser;
   };
 
-  const signup = async (payload) => {
-    const data = await signupUser(payload);
+  const signup = async (userData) => {
+    await signupUser(userData);
 
-    localStorage.setItem("chalchitra_token", data.access_token);
-
-    const currentUser = await getCurrentUser();
-    setUser(currentUser);
+    const currentUser = await login(userData.email, userData.password);
 
     return currentUser;
   };
 
   const logout = () => {
-    localStorage.removeItem("chalchitra_token");
-    setUser(null);
+    clearToken();
   };
 
   useEffect(() => {
     loadUser();
   }, []);
 
+  const value = useMemo(() => {
+    return {
+      token,
+      user,
+      authLoading,
+      isAuthenticated: Boolean(token && user),
+      login,
+      signup,
+      logout,
+      loadUser
+    };
+  }, [token, user, authLoading]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        authLoading,
-        isAuthenticated,
-        login,
-        signup,
-        logout
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+
+  return context;
 };

@@ -1,7 +1,11 @@
-const LoadingSpinner = () => {
+const LoadingSpinner = ({ small = false }) => {
   return (
     <div className="flex items-center justify-center">
-      <div className="h-10 w-10 rounded-full border-2 border-cinemaGold border-t-transparent animate-spin" />
+      <div
+        className={`animate-spin rounded-full border-2 border-cinemaGold border-t-transparent ${
+          small ? "h-5 w-5" : "h-10 w-10"
+        }`}
+      />
     </div>
   );
 };

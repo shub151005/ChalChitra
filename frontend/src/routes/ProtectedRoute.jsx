@@ -1,20 +1,30 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 const ProtectedRoute = ({ children }) => {
+  const location = useLocation();
   const { isAuthenticated, authLoading } = useAuth();
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cinemaBlack">
+      <section className="flex min-h-screen items-center justify-center bg-cinemaBlack">
         <LoadingSpinner />
-      </div>
+      </section>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          from: location
+        }}
+      />
+    );
   }
 
   return children;

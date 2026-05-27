@@ -1,7 +1,7 @@
 import axiosClient from "./axiosClient";
 
-export const signupUser = async (payload) => {
-  const response = await axiosClient.post("/auth/signup", payload);
+export const signupUser = async (userData) => {
+  const response = await axiosClient.post("/auth/signup", userData);
   return response.data;
 };
 
