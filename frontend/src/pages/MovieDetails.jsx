@@ -17,6 +17,7 @@ import { motion } from "framer-motion";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import ErrorMessage from "../components/ui/ErrorMessage";
 import MovieRow from "../components/movie/MovieRow";
+import WatchlistButton from "../components/movie/WatchlistButton";
 import { expandMovieCatalog, getMovieDetails } from "../api/movieApi";
 import {
   getMovieHiddenGems,
@@ -104,21 +105,10 @@ const MovieDetails = () => {
   const [error, setError] = useState("");
   const [expandMessage, setExpandMessage] = useState("");
 
-  const directors = useMemo(() => {
-    return movie?.directors || [];
-  }, [movie]);
-
-  const writers = useMemo(() => {
-    return movie?.writers || [];
-  }, [movie]);
-
-  const cast = useMemo(() => {
-    return movie?.cast || movie?.cast_members || [];
-  }, [movie]);
-
-  const genres = useMemo(() => {
-    return movie?.genres || [];
-  }, [movie]);
+  const directors = useMemo(() => movie?.directors || [], [movie]);
+  const writers = useMemo(() => movie?.writers || [], [movie]);
+  const cast = useMemo(() => movie?.cast || movie?.cast_members || [], [movie]);
+  const genres = useMemo(() => movie?.genres || [], [movie]);
 
   const releaseYear = movie?.release_date
     ? movie.release_date.slice(0, 4)
@@ -161,7 +151,7 @@ const MovieDetails = () => {
       const data = await getMovieDetails(tmdbId);
       setMovie(data);
 
-      loadRecommendations();
+      await loadRecommendations();
     } catch (err) {
       setError("Could not load movie details. Make sure backend is running.");
     } finally {
@@ -170,30 +160,30 @@ const MovieDetails = () => {
   };
 
   const handleExpandCatalog = async (event) => {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
 
-  try {
-    setExpanding(true);
-    setExpandMessage("");
+    try {
+      setExpanding(true);
+      setExpandMessage("");
 
-    const data = await expandMovieCatalog(tmdbId, 10);
+      const data = await expandMovieCatalog(tmdbId, 10);
 
-    setExpandMessage(
-      `Catalog expanded: ${data.candidates_found || 0} candidates found, ${
-        data.detailed_cached || 0
-      } detailed movies cached.`
-    );
+      setExpandMessage(
+        `Catalog expanded: ${data.candidates_found || 0} candidates found, ${
+          data.detailed_cached || 0
+        } detailed movies cached.`
+      );
 
-    await loadRecommendations();
-  } catch (err) {
-    setExpandMessage("Catalog expansion failed. Try again after checking backend.");
-  } finally {
-    setExpanding(false);
-  }
-};
+      await loadRecommendations();
+    } catch (err) {
+      setExpandMessage("Catalog expansion failed. Try again after checking backend.");
+    } finally {
+      setExpanding(false);
+    }
+  };
 
   useEffect(() => {
     loadMovie();
@@ -201,7 +191,7 @@ const MovieDetails = () => {
 
   if (loading) {
     return (
-      <section className="flex min-h-screen items-center justify-center">
+      <section className="flex min-h-screen items-center justify-center bg-cinemaBlack">
         <LoadingSpinner />
       </section>
     );
@@ -209,7 +199,7 @@ const MovieDetails = () => {
 
   if (error) {
     return (
-      <section className="mx-auto min-h-screen max-w-5xl px-4 py-20 md:px-8">
+      <section className="mx-auto min-h-screen max-w-5xl bg-cinemaBlack px-4 py-20 md:px-8">
         <ErrorMessage message={error} />
       </section>
     );
@@ -238,9 +228,8 @@ const MovieDetails = () => {
 
         <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-4 py-24 md:px-8">
           <button
-          type="button"
-
-           onClick={() => navigate(-1)}
+            type="button"
+            onClick={() => navigate(-1)}
             className="mb-8 flex w-fit items-center gap-2 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-cinemaMuted backdrop-blur transition hover:border-cinemaGold/50 hover:text-cinemaGold"
           >
             <ArrowLeft size={17} />
@@ -296,29 +285,34 @@ const MovieDetails = () => {
                     </span>
                   ))
                 ) : (
-                  <span className="text-sm text-cinemaDim">No genres available</span>
+                  <span className="text-sm text-cinemaDim">
+                    No genres available
+                  </span>
                 )}
               </div>
 
               <div className="mt-8 flex flex-wrap gap-4">
+                <WatchlistButton movie={movie} />
+
                 <button
+                  type="button"
                   onClick={handleExpandCatalog}
                   disabled={expanding}
-                  className="flex items-center gap-2 rounded-full bg-cinemaGold px-6 py-3 font-bold text-black transition hover:bg-cinemaGoldSoft disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex items-center gap-2 rounded-full border border-cinemaGold/40 bg-black/30 px-6 py-3 font-bold text-cinemaGold backdrop-blur transition hover:bg-cinemaGold hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {expanding ? <RefreshCcw size={18} /> : <WandSparkles size={18} />}
                   {expanding ? "Expanding Catalog..." : "Expand Recommendations"}
                 </button>
 
                 <button
-                 type="button"
+                  type="button"
                   onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  loadRecommendations();
+                    event.preventDefault();
+                    event.stopPropagation();
+                    loadRecommendations();
                   }}
                   className="flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-6 py-3 font-bold text-white backdrop-blur transition hover:border-cinemaGold/50 hover:text-cinemaGold"
-                  >
+                >
                   <Sparkles size={18} />
                   Refresh Matches
                 </button>
@@ -449,6 +443,7 @@ const MovieDetails = () => {
                   <p className="font-semibold text-white">
                     {getName(person)}
                   </p>
+
                   {getCharacter(person) && (
                     <p className="mt-1 text-sm text-cinemaDim">
                       {getCharacter(person)}
@@ -506,9 +501,11 @@ const StatCard = ({ title, value, description }) => {
       <p className="text-xs font-bold uppercase tracking-[0.25em] text-cinemaGold">
         {title}
       </p>
+
       <h3 className="mt-3 font-display text-2xl font-bold text-white">
         {value}
       </h3>
+
       <p className="mt-2 text-sm leading-6 text-cinemaMuted">
         {description}
       </p>
