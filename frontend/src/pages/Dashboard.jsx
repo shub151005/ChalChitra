@@ -23,6 +23,13 @@ import {
   getPersonalizedHiddenGems,
   getPersonalizedRecommendations
 } from "../api/recommendationApi";
+import {
+  formatAverageRating,
+  formatNumber,
+  getAnalyticsArray,
+  getAnalyticsValue,
+  getTasteSummary
+} from "../utils/analyticsHelpers";
 
 const normalizeMovies = (data) => {
   if (!data) return [];
@@ -79,16 +86,6 @@ const normalizeMovies = (data) => {
     .filter(Boolean);
 };
 
-const getAnalyticsArray = (analytics, keys) => {
-  for (const key of keys) {
-    if (Array.isArray(analytics?.[key])) {
-      return analytics[key];
-    }
-  }
-
-  return [];
-};
-
 const Dashboard = () => {
   const { user } = useAuth();
 
@@ -124,6 +121,7 @@ const Dashboard = () => {
 
       if (analyticsResult.status === "fulfilled") {
         setAnalytics(analyticsResult.value);
+        console.log("ChalChitra analytics response:", analyticsResult.value);
       }
 
       if (personalizedResult.status === "fulfilled") {
@@ -167,53 +165,93 @@ const Dashboard = () => {
   const favoriteGenres = getAnalyticsArray(analytics, [
     "favorite_genres",
     "top_genres",
-    "genres"
+    "genres",
+    "genre_preferences",
+    "genre_scores"
   ]);
 
   const favoriteLanguages = getAnalyticsArray(analytics, [
     "favorite_languages",
     "top_languages",
-    "languages"
+    "languages",
+    "language_preferences",
+    "language_scores"
   ]);
 
   const favoriteDirectors = getAnalyticsArray(analytics, [
     "favorite_directors",
     "top_directors",
-    "directors"
+    "directors",
+    "director_preferences",
+    "director_scores"
   ]);
 
   const favoriteActors = getAnalyticsArray(analytics, [
     "favorite_actors",
     "top_actors",
-    "actors"
+    "actors",
+    "actor_preferences",
+    "actor_scores"
   ]);
 
-  const totalRatings =
-    analytics?.total_ratings ||
-    analytics?.ratings_count ||
-    analytics?.rating_count ||
-    0;
+  const averageRatingRaw = getAnalyticsValue(
+    analytics,
+    [
+      "average_rating",
+      "avg_rating",
+      "user_average_rating",
+      "average_user_rating",
+      "ratings_average",
+      "avg_user_rating"
+    ],
+    null
+  );
 
-  const totalReviews =
-    analytics?.total_reviews ||
-    analytics?.reviews_count ||
-    analytics?.review_count ||
-    0;
+  const totalRatingsRaw = getAnalyticsValue(
+    analytics,
+    [
+      "total_ratings",
+      "ratings_count",
+      "rating_count",
+      "ratings",
+      "total_user_ratings",
+      "user_ratings_count"
+    ],
+    0
+  );
 
-  const totalWatchlist =
-    analytics?.total_watchlist ||
-    analytics?.watchlist_count ||
-    analytics?.saved_movies ||
-    0;
+  const totalReviewsRaw = getAnalyticsValue(
+    analytics,
+    [
+      "total_reviews",
+      "reviews_count",
+      "review_count",
+      "reviews",
+      "total_user_reviews",
+      "user_reviews_count"
+    ],
+    0
+  );
 
-  const averageRating =
-    typeof analytics?.average_rating === "number"
-      ? analytics.average_rating.toFixed(1)
-      : analytics?.average_rating || "N/A";
+  const totalWatchlistRaw = getAnalyticsValue(
+    analytics,
+    [
+      "total_watchlist",
+      "watchlist_count",
+      "saved_movies",
+      "watchlist",
+      "watchlist_total",
+      "total_saved_movies",
+      "user_watchlist_count"
+    ],
+    0
+  );
 
-  const tasteSummary =
-    analytics?.taste_summary ||
-    "Rate movies, save watchlist items, and follow creators to build a richer taste profile.";
+  const averageRating = formatAverageRating(averageRatingRaw);
+  const totalRatings = formatNumber(totalRatingsRaw, 0);
+  const totalReviews = formatNumber(totalReviewsRaw, 0);
+  const totalWatchlist = formatNumber(totalWatchlistRaw, 0);
+  const tasteSummary = getTasteSummary(analytics);
 
   return (
     <section className="mx-auto min-h-screen max-w-7xl px-4 py-12 md:px-8">
@@ -241,7 +279,11 @@ const Dashboard = () => {
 
           <button
             type="button"
-            onClick={loadDashboard}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              loadDashboard();
+            }}
             className="flex w-fit items-center gap-2 rounded-full border border-cinemaBorder px-5 py-3 text-sm font-bold text-cinemaMuted transition hover:border-cinemaGold/50 hover:text-cinemaGold"
           >
             <RefreshCcw size={17} />

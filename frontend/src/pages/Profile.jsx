@@ -18,16 +18,13 @@ import { useAuth } from "../context/AuthContext";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import ErrorMessage from "../components/ui/ErrorMessage";
 import { getMyAnalytics, getMyFollows, unfollowPerson } from "../api/userApi";
-
-const getAnalyticsArray = (analytics, keys) => {
-  for (const key of keys) {
-    if (Array.isArray(analytics?.[key])) {
-      return analytics[key];
-    }
-  }
-
-  return [];
-};
+import {
+  formatAverageRating,
+  formatNumber,
+  getAnalyticsArray,
+  getAnalyticsValue,
+  getTasteSummary
+} from "../utils/analyticsHelpers";
 
 const getItemName = (item) => {
   if (!item) return "";
@@ -102,6 +99,7 @@ const Profile = () => {
 
       if (analyticsResult.status === "fulfilled") {
         setAnalytics(analyticsResult.value);
+        console.log("ChalChitra profile analytics response:", analyticsResult.value);
       }
 
       if (followsResult.status === "fulfilled") {
@@ -121,35 +119,35 @@ const Profile = () => {
     }
   };
 
-const handleUnfollow = async (follow) => {
-  const personId = getFollowPersonId(follow);
-  const type = getFollowType(follow);
+  const handleUnfollow = async (follow) => {
+    const personId = getFollowPersonId(follow);
+    const type = getFollowType(follow);
 
-  if (!personId) {
-    setError("Cannot unfollow this creator because person ID is missing.");
-    return;
-  }
+    if (!personId) {
+      setError("Cannot unfollow this creator because person ID is missing.");
+      return;
+    }
 
-  try {
-    const key = `${personId}-${type}`;
-    setRemovingKey(key);
-    setError("");
+    try {
+      const key = `${personId}-${type}`;
+      setRemovingKey(key);
+      setError("");
 
-    await unfollowPerson(personId, type);
+      await unfollowPerson(personId, type);
 
-    setFollows((prev) =>
-      prev.filter((item) => {
-        const itemId = getFollowPersonId(item);
-        const itemType = getFollowType(item);
-        return !(Number(itemId) === Number(personId) && itemType === type);
-      })
-    );
-  } catch (err) {
-    setError("Could not unfollow this creator.");
-  } finally {
-    setRemovingKey("");
-  }
-};
+      setFollows((prev) =>
+        prev.filter((item) => {
+          const itemId = getFollowPersonId(item);
+          const itemType = getFollowType(item);
+          return !(Number(itemId) === Number(personId) && itemType === type);
+        })
+      );
+    } catch (err) {
+      setError("Could not unfollow this creator.");
+    } finally {
+      setRemovingKey("");
+    }
+  };
 
   useEffect(() => {
     loadProfile();
@@ -158,25 +156,33 @@ const handleUnfollow = async (follow) => {
   const favoriteGenres = getAnalyticsArray(analytics, [
     "favorite_genres",
     "top_genres",
-    "genres"
+    "genres",
+    "genre_preferences",
+    "genre_scores"
   ]);
 
   const favoriteLanguages = getAnalyticsArray(analytics, [
     "favorite_languages",
     "top_languages",
-    "languages"
+    "languages",
+    "language_preferences",
+    "language_scores"
   ]);
 
   const favoriteDirectors = getAnalyticsArray(analytics, [
     "favorite_directors",
     "top_directors",
-    "directors"
+    "directors",
+    "director_preferences",
+    "director_scores"
   ]);
 
   const favoriteActors = getAnalyticsArray(analytics, [
     "favorite_actors",
     "top_actors",
-    "actors"
+    "actors",
+    "actor_preferences",
+    "actor_scores"
   ]);
 
   const followedDirectors = follows.filter(
@@ -187,32 +193,64 @@ const handleUnfollow = async (follow) => {
     (follow) => getFollowType(follow) === "actor"
   );
 
-  const totalRatings =
-    analytics?.total_ratings ||
-    analytics?.ratings_count ||
-    analytics?.rating_count ||
-    0;
+  const averageRatingRaw = getAnalyticsValue(
+    analytics,
+    [
+      "average_rating",
+      "avg_rating",
+      "user_average_rating",
+      "average_user_rating",
+      "ratings_average",
+      "avg_user_rating"
+    ],
+    null
+  );
 
-  const totalReviews =
-    analytics?.total_reviews ||
-    analytics?.reviews_count ||
-    analytics?.review_count ||
-    0;
+  const totalRatingsRaw = getAnalyticsValue(
+    analytics,
+    [
+      "total_ratings",
+      "ratings_count",
+      "rating_count",
+      "ratings",
+      "total_user_ratings",
+      "user_ratings_count"
+    ],
+    0
+  );
 
-  const totalWatchlist =
-    analytics?.total_watchlist ||
-    analytics?.watchlist_count ||
-    analytics?.saved_movies ||
-    0;
+  const totalReviewsRaw = getAnalyticsValue(
+    analytics,
+    [
+      "total_reviews",
+      "reviews_count",
+      "review_count",
+      "reviews",
+      "total_user_reviews",
+      "user_reviews_count"
+    ],
+    0
+  );
 
-  const averageRating =
-    typeof analytics?.average_rating === "number"
-      ? analytics.average_rating.toFixed(1)
-      : analytics?.average_rating || "N/A";
+  const totalWatchlistRaw = getAnalyticsValue(
+    analytics,
+    [
+      "total_watchlist",
+      "watchlist_count",
+      "saved_movies",
+      "watchlist",
+      "watchlist_total",
+      "total_saved_movies",
+      "user_watchlist_count"
+    ],
+    0
+  );
 
-  const tasteSummary =
-    analytics?.taste_summary ||
-    "Your taste profile grows as you rate movies, save films, write reviews, and follow creators.";
+  const averageRating = formatAverageRating(averageRatingRaw);
+  const totalRatings = formatNumber(totalRatingsRaw, 0);
+  const totalReviews = formatNumber(totalReviewsRaw, 0);
+  const totalWatchlist = formatNumber(totalWatchlistRaw, 0);
+  const tasteSummary = getTasteSummary(analytics);
 
   return (
     <section className="mx-auto min-h-screen max-w-7xl px-4 py-12 md:px-8">
@@ -240,9 +278,9 @@ const handleUnfollow = async (follow) => {
           <button
             type="button"
             onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            loadProfile();
+              event.preventDefault();
+              event.stopPropagation();
+              loadProfile();
             }}
             className="flex w-fit items-center gap-2 rounded-full border border-cinemaBorder px-5 py-3 text-sm font-bold text-cinemaMuted transition hover:border-cinemaGold/50 hover:text-cinemaGold"
           >
@@ -495,12 +533,11 @@ const FollowList = ({
 
                 <button
                   type="button"
-  onClick={(event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onUnfollow(follow);
-  }}
-  disabled={removingKey === key}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onUnfollow(follow);
+                  }}
                   disabled={removingKey === key}
                   className="rounded-full border border-red-500/30 bg-red-500/10 p-2 text-red-300 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
