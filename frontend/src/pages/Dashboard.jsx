@@ -124,13 +124,31 @@ const Dashboard = () => {
         console.log("ChalChitra analytics response:", analyticsResult.value);
       }
 
-      if (personalizedResult.status === "fulfilled") {
-        setPersonalizedMovies(normalizeMovies(personalizedResult.value));
-      }
+     let normalPersonalized = [];
+let normalHiddenGems = [];
 
-      if (hiddenGemResult.status === "fulfilled") {
-        setHiddenGems(normalizeMovies(hiddenGemResult.value));
-      }
+if (personalizedResult.status === "fulfilled") {
+  normalPersonalized = normalizeMovies(personalizedResult.value);
+}
+
+if (hiddenGemResult.status === "fulfilled") {
+  normalHiddenGems = normalizeMovies(hiddenGemResult.value);
+}
+
+const personalizedIds = new Set(
+  normalPersonalized.map((movie) => movie.tmdb_id)
+);
+
+const uniquePersonalHiddenGems = normalHiddenGems.filter(
+  (movie) => !personalizedIds.has(movie.tmdb_id)
+);
+
+setPersonalizedMovies(normalPersonalized);
+setHiddenGems(
+  uniquePersonalHiddenGems.length > 0
+    ? uniquePersonalHiddenGems
+    : normalHiddenGems
+);
 
       if (directorResult.status === "fulfilled") {
         setDirectorMovies(normalizeMovies(directorResult.value));

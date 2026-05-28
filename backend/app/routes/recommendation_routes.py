@@ -4,6 +4,11 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_db, get_current_user
 from app.models.user import User
 
+from app.services.recommendation_quality_service import (
+    build_hidden_gem_results,
+    build_similar_taste_results
+)
+
 from app.services.recommendation_service import (
     get_movie_recommendations,
     get_hidden_gems_for_movie,
@@ -27,29 +32,57 @@ def recommendation_test():
 
 
 @router.get("/movie/{tmdb_id}")
-def recommend_by_movie(
+def movie_recommendations(
     tmdb_id: int,
-    limit: int = Query(default=10, ge=1, le=50),
+    limit: int = 10,
     db: Session = Depends(get_db)
 ):
-    return get_movie_recommendations(
+    raw_recommendations = get_movie_recommendations(
         db=db,
         tmdb_id=tmdb_id,
+        limit=max(limit * 2, 20)
+    )
+
+    similar_results = build_similar_taste_results(
+        raw_movies=raw_recommendations,
         limit=limit
     )
 
+    return {
+        "results": similar_results,
+        "recommendations": similar_results,
+        "type": "similar_taste"
+    }
 
 @router.get("/hidden-gems/{tmdb_id}")
-def hidden_gems_by_movie(
+def hidden_gems(
     tmdb_id: int,
-    limit: int = Query(default=10, ge=1, le=50),
+    limit: int = 10,
     db: Session = Depends(get_db)
 ):
-    return get_hidden_gems_for_movie(
+    raw_recommendations = get_movie_recommendations(
         db=db,
         tmdb_id=tmdb_id,
-        limit=limit
+        limit=max(limit * 4, 40)
     )
+
+    similar_results = build_similar_taste_results(
+        raw_movies=raw_recommendations,
+        limit=max(limit, 10)
+    )
+
+    hidden_results = build_hidden_gem_results(
+        raw_movies=raw_recommendations,
+        similar_movies=similar_results,
+        limit=limit,
+        exclude_top_similar_count=5
+    )
+
+    return {
+        "results": hidden_results,
+        "hidden_gems": hidden_results,
+        "type": "hidden_gems"
+    }
 
 
 @router.get("/me")

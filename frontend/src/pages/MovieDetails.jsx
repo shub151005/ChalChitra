@@ -124,43 +124,61 @@ const MovieDetails = () => {
 
   const runtime = movie?.runtime ? `${movie.runtime} min` : "N/A";
 
-  const loadRecommendations = async () => {
-    try {
-      setRecommendationLoading(true);
+const loadRecommendations = async () => {
+  try {
+    setRecommendationLoading(true);
 
-      const [recommendationData, hiddenGemData] = await Promise.allSettled([
-        getMovieRecommendations(tmdbId, 10),
-        getMovieHiddenGems(tmdbId, 10)
-      ]);
+    const [recommendationData, hiddenGemData] = await Promise.allSettled([
+      getMovieRecommendations(tmdbId, 10),
+      getMovieHiddenGems(tmdbId, 10)
+    ]);
 
-      if (recommendationData.status === "fulfilled") {
-        setRecommendations(normalizeMovies(recommendationData.value));
-      }
+    let normalRecommendations = [];
+    let normalHiddenGems = [];
 
-      if (hiddenGemData.status === "fulfilled") {
-        setHiddenGems(normalizeMovies(hiddenGemData.value));
-      }
-    } finally {
-      setRecommendationLoading(false);
+    if (recommendationData.status === "fulfilled") {
+      normalRecommendations = normalizeMovies(recommendationData.value);
     }
-  };
 
+    if (hiddenGemData.status === "fulfilled") {
+      normalHiddenGems = normalizeMovies(hiddenGemData.value);
+    }
+
+    const recommendationIds = new Set(
+      normalRecommendations.map((movie) => movie.tmdb_id)
+    );
+
+    const uniqueHiddenGems = normalHiddenGems.filter(
+      (movie) => !recommendationIds.has(movie.tmdb_id)
+    );
+
+    setRecommendations(normalRecommendations);
+    setHiddenGems(
+      uniqueHiddenGems.length > 0 ? uniqueHiddenGems : normalHiddenGems
+    );
+  } catch (err) {
+    console.error("Recommendation loading failed:", err);
+    setRecommendations([]);
+    setHiddenGems([]);
+  } finally {
+    setRecommendationLoading(false);
+  }
+};
   const loadMovie = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      setExpandMessage("");
+  try {
+    setLoading(true);
+    setError("");
+    setExpandMessage("");
 
-      const data = await getMovieDetails(tmdbId);
-      setMovie(data);
-
-      await loadRecommendations();
-    } catch (err) {
-      setError("Could not load movie details. Make sure backend is running.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const data = await getMovieDetails(tmdbId);
+    setMovie(data);
+  } catch (err) {
+    console.error("Movie detail loading failed:", err);
+    setError("Could not load movie details. Make sure backend is running.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleExpandCatalog = async (event) => {
     if (event) {
@@ -189,9 +207,9 @@ const MovieDetails = () => {
   };
 
   useEffect(() => {
-    loadMovie();
-  }, [tmdbId]);
-
+  loadMovie();
+  loadRecommendations();
+}, [tmdbId]);
   if (loading) {
     return (
       <section className="flex min-h-screen items-center justify-center bg-cinemaBlack">
