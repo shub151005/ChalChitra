@@ -201,18 +201,18 @@ const Home = () => {
         {!homeLoading && !homeError && (
           <>
             <MovieRow
-              title="Trending Worldwide"
-              subtitle="Popular films people are watching right now."
-              movies={trendingMovies}
-              onViewMore={() => navigate("/search?section=trending")}
+             title="Trending Worldwide"
+             subtitle="Popular films people are watching right now."
+             movies={trendingMovies.slice(0, 8)}
+             onViewMore={() => navigate("/search?section=trending")}
             />
 
             <MovieRow
-              title="Top Rated Classics"
+             title="Top Rated Classics"
               subtitle="High-rated films to start your discovery journey."
-              movies={topRatedMovies}
+             movies={topRatedMovies.slice(0, 8)}
               onViewMore={() => navigate("/search?section=top-rated")}
-            />
+            /> 
           </>
         )}
       </section>

@@ -40,10 +40,12 @@ const rating =
       <div className="relative aspect-[2/3] overflow-hidden bg-cinemaPanel">
         {movie.poster_url ? (
           <img
-            src={movie.poster_url}
-            alt={movie.title}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
-          />
+             src={movie.poster_url}
+             alt={movie.title || movie.original_title || "Movie poster"}
+             loading="lazy"
+             decoding="async"
+             className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+             />
         ) : (
           <div className="flex h-full w-full items-center justify-center px-3 text-center text-sm text-cinemaDim">
             No Poster

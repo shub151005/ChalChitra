@@ -12,6 +12,12 @@ import {
   searchMovies
 } from "../api/movieApi";
 
+const searchCache = new Map();
+
+const getCacheKey = (query, page) => {
+  return `${query.trim().toLowerCase()}::${page}`;
+};
+
 const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -103,8 +109,18 @@ const Search = () => {
 
       setError("");
 
-      const data = await searchMovies(cleanedQuery, pageNumber);
-      const newMovies = data.results || [];
+      const cacheKey = getCacheKey(cleanedQuery, pageNumber);
+
+let data;
+
+if (searchCache.has(cacheKey)) {
+  data = searchCache.get(cacheKey);
+} else {
+  data = await searchMovies(cleanedQuery, pageNumber);
+  searchCache.set(cacheKey, data);
+}
+
+const newMovies = data.results || [];
 
       setMovies((prev) => {
         if (!append) {
@@ -133,33 +149,51 @@ const Search = () => {
   };
 
   const fetchSuggestions = async (value) => {
-    const cleanedValue = value.trim();
+  const cleanedValue = value.trim();
 
-    if (!showSuggestions) {
-      return;
-    }
+  if (!showSuggestions) {
+    return;
+  }
 
-    if (cleanedValue.length < 2) {
-      setSuggestions([]);
-      return;
-    }
+  if (cleanedValue.length < 3) {
+    setSuggestions([]);
+    return;
+  }
 
-    try {
-      setSuggestionLoading(true);
+  try {
+    setSuggestionLoading(true);
 
-      const data = await searchMovies(cleanedValue, 1);
-      setSuggestions((data.results || []).slice(0, 6));
-    } catch (err) {
-      setSuggestions([]);
-    } finally {
-      setSuggestionLoading(false);
-    }
-  };
+    const cacheKey = getCacheKey(cleanedValue, 1);
+
+   let data;
+
+  if (searchCache.has(cacheKey)) {
+  data = searchCache.get(cacheKey);
+  } else {
+  data = await searchMovies(cleanedValue, 1);
+  searchCache.set(cacheKey, data);
+  }
+
+setSuggestions((data.results || []).slice(0, 5));
+  } catch (err) {
+    setSuggestions([]);
+  } finally {
+    setSuggestionLoading(false);
+  }
+};
 
   const handleInputChange = (event) => {
-    setQuery(event.target.value);
+  const value = event.target.value;
+
+  setQuery(value);
+
+  if (value.trim().length >= 3) {
     setShowSuggestions(true);
-  };
+  } else {
+    setShowSuggestions(false);
+    setSuggestions([]);
+  }
+};
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -197,12 +231,21 @@ const Search = () => {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchSuggestions(query);
-    }, 350);
+  if (!showSuggestions) {
+    return;
+  }
 
-    return () => clearTimeout(timer);
-  }, [query, showSuggestions]);
+  if (query.trim().length < 3) {
+    setSuggestions([]);
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    fetchSuggestions(query);
+   }, 700);
+
+  return () => clearTimeout(timer);
+ }, [query, showSuggestions]);
 
   useEffect(() => {
     if (initialQuery) {
@@ -249,9 +292,9 @@ const Search = () => {
               value={query}
               onChange={handleInputChange}
               onFocus={() => {
-                if (query.trim().length >= 2) {
-                  setShowSuggestions(true);
-                }
+              if (query.trim().length >= 3 && movies.length === 0) {
+              setShowSuggestions(true);
+              }
               }}
               placeholder="Try The Shining, Parasite, Aamis, La La Land..."
               className="w-full bg-transparent text-white outline-none placeholder:text-cinemaDim"
