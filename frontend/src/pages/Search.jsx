@@ -9,13 +9,18 @@ import ErrorMessage from "../components/ui/ErrorMessage";
 import {
   getTopRatedMovies,
   getTrendingMovies,
-  searchMovies
+  searchMovies,
+  suggestMovies
 } from "../api/movieApi";
 
 const searchCache = new Map();
 
 const getCacheKey = (query, page) => {
   return `${query.trim().toLowerCase()}::${page}`;
+};
+
+const getSuggestCacheKey = (query) => {
+  return `suggest::${query.trim().toLowerCase()}`;
 };
 
 const Search = () => {
@@ -38,7 +43,11 @@ const Search = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
 
-  const loadSectionMovies = async (sectionName, pageNumber = 1, append = false) => {
+  const loadSectionMovies = async (
+    sectionName,
+    pageNumber = 1,
+    append = false
+  ) => {
     try {
       setShowSuggestions(false);
       setSuggestions([]);
@@ -88,7 +97,11 @@ const Search = () => {
     }
   };
 
-  const runSearch = async (searchQuery = query, pageNumber = 1, append = false) => {
+  const runSearch = async (
+    searchQuery = query,
+    pageNumber = 1,
+    append = false
+  ) => {
     const cleanedQuery = searchQuery.trim();
 
     setShowSuggestions(false);
@@ -97,6 +110,7 @@ const Search = () => {
     if (!cleanedQuery) {
       setMovies([]);
       setSearchTitle("Search ChalChitra");
+      setSearchParams({});
       return;
     }
 
@@ -111,16 +125,16 @@ const Search = () => {
 
       const cacheKey = getCacheKey(cleanedQuery, pageNumber);
 
-let data;
+      let data;
 
-if (searchCache.has(cacheKey)) {
-  data = searchCache.get(cacheKey);
-} else {
-  data = await searchMovies(cleanedQuery, pageNumber);
-  searchCache.set(cacheKey, data);
-}
+      if (searchCache.has(cacheKey)) {
+        data = searchCache.get(cacheKey);
+      } else {
+        data = await searchMovies(cleanedQuery, pageNumber);
+        searchCache.set(cacheKey, data);
+      }
 
-const newMovies = data.results || [];
+      const newMovies = data.results || [];
 
       setMovies((prev) => {
         if (!append) {
@@ -149,51 +163,51 @@ const newMovies = data.results || [];
   };
 
   const fetchSuggestions = async (value) => {
-  const cleanedValue = value.trim();
+    const cleanedValue = value.trim();
 
-  if (!showSuggestions) {
-    return;
-  }
+    if (!showSuggestions) {
+      return;
+    }
 
-  if (cleanedValue.length < 3) {
-    setSuggestions([]);
-    return;
-  }
+    if (cleanedValue.length < 4) {
+      setSuggestions([]);
+      return;
+    }
 
-  try {
-    setSuggestionLoading(true);
+    try {
+      setSuggestionLoading(true);
 
-    const cacheKey = getCacheKey(cleanedValue, 1);
+      const cacheKey = getSuggestCacheKey(cleanedValue);
 
-   let data;
+      let data;
 
-  if (searchCache.has(cacheKey)) {
-  data = searchCache.get(cacheKey);
-  } else {
-  data = await searchMovies(cleanedValue, 1);
-  searchCache.set(cacheKey, data);
-  }
+      if (searchCache.has(cacheKey)) {
+        data = searchCache.get(cacheKey);
+      } else {
+        data = await suggestMovies(cleanedValue, 5);
+        searchCache.set(cacheKey, data);
+      }
 
-setSuggestions((data.results || []).slice(0, 5));
-  } catch (err) {
-    setSuggestions([]);
-  } finally {
-    setSuggestionLoading(false);
-  }
-};
+      setSuggestions((data.results || data.suggestions || []).slice(0, 5));
+    } catch (err) {
+      setSuggestions([]);
+    } finally {
+      setSuggestionLoading(false);
+    }
+  };
 
   const handleInputChange = (event) => {
-  const value = event.target.value;
+    const value = event.target.value;
 
-  setQuery(value);
+    setQuery(value);
 
-  if (value.trim().length >= 3) {
-    setShowSuggestions(true);
-  } else {
-    setShowSuggestions(false);
-    setSuggestions([]);
-  }
-};
+    if (value.trim().length >= 4) {
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+      setSuggestions([]);
+    }
+  };
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -201,10 +215,16 @@ setSuggestions((data.results || []).slice(0, 5));
   };
 
   const handleSuggestionClick = (movie) => {
+    const selectedTitle = movie.title || movie.original_title || "";
+
+    if (!selectedTitle) {
+      return;
+    }
+
     setShowSuggestions(false);
     setSuggestions([]);
-    setQuery(movie.title);
-    runSearch(movie.title, 1, false);
+    setQuery(selectedTitle);
+    runSearch(selectedTitle, 1, false);
   };
 
   const handleLoadMore = () => {
@@ -228,24 +248,26 @@ setSuggestions((data.results || []).slice(0, 5));
     setShowSuggestions(false);
     setSearchTitle("Search ChalChitra");
     setSearchParams({});
+    setPage(1);
+    setCurrentMode("search");
   };
 
   useEffect(() => {
-  if (!showSuggestions) {
-    return;
-  }
+    if (!showSuggestions) {
+      return;
+    }
 
-  if (query.trim().length < 3) {
-    setSuggestions([]);
-    return;
-  }
+    if (query.trim().length < 4) {
+      setSuggestions([]);
+      return;
+    }
 
-  const timer = setTimeout(() => {
-    fetchSuggestions(query);
-   }, 700);
+    const timer = setTimeout(() => {
+      fetchSuggestions(query);
+    }, 1000);
 
-  return () => clearTimeout(timer);
- }, [query, showSuggestions]);
+    return () => clearTimeout(timer);
+  }, [query, showSuggestions]);
 
   useEffect(() => {
     if (initialQuery) {
@@ -292,9 +314,9 @@ setSuggestions((data.results || []).slice(0, 5));
               value={query}
               onChange={handleInputChange}
               onFocus={() => {
-              if (query.trim().length >= 3 && movies.length === 0) {
-              setShowSuggestions(true);
-              }
+                if (query.trim().length >= 4 && movies.length === 0) {
+                  setShowSuggestions(true);
+                }
               }}
               placeholder="Try The Shining, Parasite, Aamis, La La Land..."
               className="w-full bg-transparent text-white outline-none placeholder:text-cinemaDim"
@@ -335,14 +357,19 @@ setSuggestions((data.results || []).slice(0, 5));
                   {movie.poster_url ? (
                     <img
                       src={movie.poster_url}
-                      alt={movie.title}
+                      alt={movie.title || "Movie poster"}
+                      loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover"
                     />
                   ) : null}
                 </div>
 
                 <div>
-                  <p className="font-semibold text-white">{movie.title}</p>
+                  <p className="font-semibold text-white">
+                    {movie.title || movie.original_title}
+                  </p>
+
                   <p className="text-sm text-cinemaMuted">
                     {movie.release_date?.slice(0, 4) || "N/A"} •{" "}
                     {movie.language || "na"} •{" "}
@@ -402,6 +429,7 @@ setSuggestions((data.results || []).slice(0, 5));
 
               <div className="mt-10 flex justify-center">
                 <button
+                  type="button"
                   onClick={handleLoadMore}
                   disabled={loadingMore}
                   className="rounded-full border border-cinemaGold/40 px-6 py-3 font-bold text-cinemaGold transition hover:bg-cinemaGold hover:text-black disabled:cursor-not-allowed disabled:opacity-60"

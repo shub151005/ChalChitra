@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Query, Depends
 from sqlalchemy.orm import Session
 
+from app.services.search_suggestion_service import get_local_movie_suggestions
+
 from app.dependencies import get_db
 
 from difflib import SequenceMatcher
@@ -54,25 +56,29 @@ def search_movie(
     page: int = 1,
     db: Session = Depends(get_db)
 ):
-    tmdb_response = search_movies(query, page)
+    try:
+        tmdb_response = search_movies(query, page)
 
-    if isinstance(tmdb_response, dict):
-        movies = tmdb_response.get("results", [])
-    else:
-        movies = tmdb_response
+        if isinstance(tmdb_response, dict):
+            movies = tmdb_response.get("results", [])
+        else:
+            movies = tmdb_response
 
-    for movie in movies:
-        if isinstance(movie, dict):
-            save_or_update_basic_movie(
-                db=db,
-                movie_data=movie
-            )
+        for movie in movies:
+            if isinstance(movie, dict):
+                save_or_update_basic_movie(
+                    db=db,
+                    movie_data=movie
+                )
 
-    if movies:
-        return {
-            "results": movies,
-            "search_type": "tmdb"
-        }
+        if movies:
+            return {
+                "results": movies,
+                "search_type": "tmdb"
+            }
+
+    except Exception as error:
+        print(f"TMDb search failed for '{query}': {error}")
 
     fuzzy_movies = fuzzy_local_movie_search(
         db=db,
@@ -82,7 +88,7 @@ def search_movie(
 
     return {
         "results": fuzzy_movies,
-        "search_type": "fuzzy_local"
+        "search_type": "fuzzy_local_fallback"
     }
 
 @router.get("/trending")
@@ -90,16 +96,38 @@ def trending_movies(
     page: int = 1,
     db: Session = Depends(get_db)
 ):
-    movies = get_trending_movies(page=page)    
+    try:
+        movies = get_trending_movies(page=page)
 
-    for movie in movies:
-        save_or_update_basic_movie(
-            db=db,
-            movie_data=movie
-        )
+        for movie in movies:
+            save_or_update_basic_movie(
+                db=db,
+                movie_data=movie
+            )
+
+        if movies:
+            return {
+                "results": movies,
+                "source": "tmdb"
+            }
+
+    except Exception as error:
+        print(f"TMDb trending failed: {error}")
+
+    cached_movies = (
+        db.query(Movie)
+        .filter(Movie.poster_url.isnot(None))
+        .order_by(Movie.popularity.desc().nullslast())
+        .limit(20)
+        .all()
+    )
 
     return {
-        "results": movies
+        "results": [
+            movie_to_basic_response(movie)
+            for movie in cached_movies
+        ],
+        "source": "local_cache_fallback"
     }
 
 @router.get("/top-rated")
@@ -107,16 +135,39 @@ def top_rated_movies(
     page: int = 1,
     db: Session = Depends(get_db)
 ):
-    movies = get_top_rated_movies(page=page)
+    try:
+        movies = get_top_rated_movies(page=page)
 
-    for movie in movies:
-        save_or_update_basic_movie(
-            db=db,
-            movie_data=movie
-        )
+        for movie in movies:
+            save_or_update_basic_movie(
+                db=db,
+                movie_data=movie
+            )
+
+        if movies:
+            return {
+                "results": movies,
+                "source": "tmdb"
+            }
+
+    except Exception as error:
+        print(f"TMDb top-rated failed: {error}")
+
+    cached_movies = (
+        db.query(Movie)
+        .filter(Movie.poster_url.isnot(None))
+        .filter(Movie.rating.isnot(None))
+        .order_by(Movie.rating.desc().nullslast())
+        .limit(20)
+        .all()
+    )
 
     return {
-        "results": movies
+        "results": [
+            movie_to_basic_response(movie)
+            for movie in cached_movies
+        ],
+        "source": "local_cache_fallback"
     }
 
 @router.post("/catalog/seed")
@@ -232,6 +283,34 @@ def expand_movie_catalog(
         detail_limit=detail_limit
     )
 
+@router.get("/suggest")
+def suggest_movies(
+    query: str,
+    limit: int = 5,
+    db: Session = Depends(get_db)
+):
+    cleaned_query = query.strip()
+
+    if len(cleaned_query) < 2:
+        return {
+            "results": [],
+            "suggestions": [],
+            "query": cleaned_query,
+            "source": "local_fuzzy"
+        }
+
+    suggestions = get_local_movie_suggestions(
+        db=db,
+        query=cleaned_query,
+        limit=limit
+    )
+
+    return {
+        "results": suggestions,
+        "suggestions": suggestions,
+        "query": cleaned_query,
+        "source": "local_fuzzy"
+    }
 
 @router.get("/{tmdb_id}")
 def movie_details(

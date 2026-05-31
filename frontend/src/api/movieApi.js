@@ -11,6 +11,17 @@ export const searchMovies = async (query, page = 1) => {
   return response.data;
 };
 
+export const suggestMovies = async (query, limit = 5) => {
+  const response = await axiosClient.get("/movies/suggest", {
+    params: {
+      query,
+      limit
+    }
+  });
+
+  return response.data;
+};
+
 export const getMovieDetails = async (tmdbId) => {
   const response = await axiosClient.get(`/movies/${tmdbId}`);
   return response.data;
