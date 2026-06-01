@@ -1,3 +1,4 @@
+from app.services.ml_recommendation_service import get_ml_similar_movies
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -30,6 +31,15 @@ def recommendation_test():
         "message": "Recommendation routes working"
     }
 
+@router.get("/ml/movie/{tmdb_id}")
+def ml_movie_recommendations(
+    tmdb_id: int,
+    limit: int = 10
+):
+    return get_ml_similar_movies(
+        tmdb_id=tmdb_id,
+        limit=limit
+    )
 
 @router.get("/movie/{tmdb_id}")
 def movie_recommendations(
