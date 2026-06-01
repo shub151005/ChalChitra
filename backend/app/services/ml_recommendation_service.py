@@ -106,3 +106,22 @@ def get_ml_similar_movies(tmdb_id: int, limit: int = 10):
         "results": results,
         "model": "tfidf_cosine_similarity"
     }
+
+def get_ml_similarity_score_map(tmdb_id: int, limit: int = 50):
+    ml_response = get_ml_similar_movies(
+        tmdb_id=tmdb_id,
+        limit=limit
+    )
+
+    results = ml_response.get("results", [])
+
+    score_map = {}
+
+    for movie in results:
+        movie_tmdb_id = movie.get("tmdb_id")
+        score = movie.get("ml_similarity_score", 0)
+
+        if movie_tmdb_id is not None:
+            score_map[int(movie_tmdb_id)] = float(score or 0)
+
+    return score_map

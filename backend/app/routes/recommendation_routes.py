@@ -1,3 +1,4 @@
+from app.services.hybrid_recommendation_service import build_hybrid_movie_recommendations
 from app.services.ml_recommendation_service import get_ml_similar_movies
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -37,6 +38,18 @@ def ml_movie_recommendations(
     limit: int = 10
 ):
     return get_ml_similar_movies(
+        tmdb_id=tmdb_id,
+        limit=limit
+    )
+
+@router.get("/hybrid/movie/{tmdb_id}")
+def hybrid_movie_recommendations(
+    tmdb_id: int,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    return build_hybrid_movie_recommendations(
+        db=db,
         tmdb_id=tmdb_id,
         limit=limit
     )
