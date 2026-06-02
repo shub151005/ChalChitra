@@ -295,7 +295,7 @@ def calculate_hybrid_score(movie):
                 + poster_bonus
             )
 
-    return round(final_score, 4)
+    return round(final_score, 4) 
 
 
 def get_source_priority(movie):

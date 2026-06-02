@@ -24,7 +24,8 @@ import WatchlistButton from "../components/movie/WatchlistButton";
 import { expandMovieCatalog, getMovieDetails } from "../api/movieApi";
 import {
   getMovieHiddenGems,
-  getMovieRecommendations
+  getMovieRecommendations,
+  getHybridMovieRecommendations
 } from "../api/recommendationApi";
 
 const getName = (person) => {
@@ -69,6 +70,7 @@ const normalizeMovies = (data) => {
             item.score ||
             item.similarity_score ||
             item.final_score ||
+            item.hybrid_score ||
             item.recommendation_score ||
             null,
           score_breakdown: item.score_breakdown || null,
@@ -83,14 +85,16 @@ const normalizeMovies = (data) => {
             item.score ||
             item.similarity_score ||
             item.final_score ||
+            item.hybrid_score ||
             null,
-          score_breakdown: item.score_breakdown || null
+          score_breakdown: item.score_breakdown || null,
+          reason: item.reason || item.explanation || null
         };
       }
 
       return null;
     })
-    .filter(Boolean);
+    .filter((movie) => movie && movie.tmdb_id);
 };
 
 const MovieDetails = () => {
@@ -118,67 +122,75 @@ const MovieDetails = () => {
     : "N/A";
 
   const rating =
-    typeof movie?.rating === "number"
-      ? movie.rating.toFixed(1)
-      : "N/A";
+    typeof movie?.rating === "number" ? movie.rating.toFixed(1) : "N/A";
 
   const runtime = movie?.runtime ? `${movie.runtime} min` : "N/A";
 
-const loadRecommendations = async () => {
-  try {
-    setRecommendationLoading(true);
+  const loadRecommendations = async () => {
+    try {
+      setRecommendationLoading(true);
 
-    const [recommendationData, hiddenGemData] = await Promise.allSettled([
-      getMovieRecommendations(tmdbId, 10),
-      getMovieHiddenGems(tmdbId, 10)
-    ]);
+      const [recommendationData, hiddenGemData] = await Promise.allSettled([
+        getHybridMovieRecommendations(tmdbId, 10),
+        getMovieHiddenGems(tmdbId, 10)
+      ]);
 
-    let normalRecommendations = [];
-    let normalHiddenGems = [];
+      let normalRecommendations = [];
+      let normalHiddenGems = [];
 
-    if (recommendationData.status === "fulfilled") {
-      normalRecommendations = normalizeMovies(recommendationData.value);
+      if (recommendationData.status === "fulfilled") {
+        normalRecommendations = normalizeMovies(recommendationData.value);
+      }
+
+      if (recommendationData.status === "rejected" || normalRecommendations.length === 0) {
+        try {
+          const fallbackData = await getMovieRecommendations(tmdbId, 10);
+          normalRecommendations = normalizeMovies(fallbackData);
+        } catch (fallbackError) {
+          console.error("Fallback recommendation failed:", fallbackError);
+        }
+      }
+
+      if (hiddenGemData.status === "fulfilled") {
+        normalHiddenGems = normalizeMovies(hiddenGemData.value);
+      }
+
+      const recommendationIds = new Set(
+        normalRecommendations.map((movie) => movie.tmdb_id)
+      );
+
+      const uniqueHiddenGems = normalHiddenGems.filter(
+        (movie) => !recommendationIds.has(movie.tmdb_id)
+      );
+
+      setRecommendations(normalRecommendations);
+      setHiddenGems(
+        uniqueHiddenGems.length > 0 ? uniqueHiddenGems : normalHiddenGems
+      );
+    } catch (err) {
+      console.error("Recommendation loading failed:", err);
+      setRecommendations([]);
+      setHiddenGems([]);
+    } finally {
+      setRecommendationLoading(false);
     }
+  };
 
-    if (hiddenGemData.status === "fulfilled") {
-      normalHiddenGems = normalizeMovies(hiddenGemData.value);
-    }
-
-    const recommendationIds = new Set(
-      normalRecommendations.map((movie) => movie.tmdb_id)
-    );
-
-    const uniqueHiddenGems = normalHiddenGems.filter(
-      (movie) => !recommendationIds.has(movie.tmdb_id)
-    );
-
-    setRecommendations(normalRecommendations);
-    setHiddenGems(
-      uniqueHiddenGems.length > 0 ? uniqueHiddenGems : normalHiddenGems
-    );
-  } catch (err) {
-    console.error("Recommendation loading failed:", err);
-    setRecommendations([]);
-    setHiddenGems([]);
-  } finally {
-    setRecommendationLoading(false);
-  }
-};
   const loadMovie = async () => {
-  try {
-    setLoading(true);
-    setError("");
-    setExpandMessage("");
+    try {
+      setLoading(true);
+      setError("");
+      setExpandMessage("");
 
-    const data = await getMovieDetails(tmdbId);
-    setMovie(data);
-  } catch (err) {
-    console.error("Movie detail loading failed:", err);
-    setError("Could not load movie details. Make sure backend is running.");
-  } finally {
-    setLoading(false);
-  }
-};
+      const data = await getMovieDetails(tmdbId);
+      setMovie(data);
+    } catch (err) {
+      console.error("Movie detail loading failed:", err);
+      setError("Could not load movie details. Make sure backend is running.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExpandCatalog = async (event) => {
     if (event) {
@@ -207,9 +219,10 @@ const loadRecommendations = async () => {
   };
 
   useEffect(() => {
-  loadMovie();
-  loadRecommendations();
-}, [tmdbId]);
+    loadMovie();
+    loadRecommendations();
+  }, [tmdbId]);
+
   if (loading) {
     return (
       <section className="flex min-h-screen items-center justify-center bg-cinemaBlack">
@@ -401,35 +414,36 @@ const loadRecommendations = async () => {
 
       <section className="mx-auto max-w-7xl px-4 py-16 md:px-8">
         <div className="mb-10 grid gap-5 lg:grid-cols-[420px_1fr]">
-  <RatingBox movie={movie} />
+          <RatingBox movie={movie} />
 
-  <div className="glass-panel rounded-3xl p-5">
-    <p className="text-xs font-bold uppercase tracking-[0.25em] text-cinemaGold">
-      Taste Impact
-    </p>
+          <div className="glass-panel rounded-3xl p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-cinemaGold">
+              Taste Impact
+            </p>
 
-    <h3 className="mt-3 font-display text-2xl font-bold text-white">
-      Why ratings matter
-    </h3>
+            <h3 className="mt-3 font-display text-2xl font-bold text-white">
+              Why ratings matter
+            </h3>
 
-    <p className="mt-2 leading-7 text-cinemaMuted">
-      Your rating becomes one of the strongest signals for personalized recommendations.
-      ChalChitra uses it with genres, story similarity, directors, actors, watchlist
-      behavior, and hidden-gem discovery.
-    </p>
-  </div>
-</div>
+            <p className="mt-2 leading-7 text-cinemaMuted">
+              Your rating becomes one of the strongest signals for personalized
+              recommendations. ChalChitra uses it with genres, story similarity,
+              directors, actors, watchlist behavior, and hidden-gem discovery.
+            </p>
+          </div>
+        </div>
+
         <div className="mb-10 grid gap-5 md:grid-cols-3">
           <StatCard
-            title="Similarity Logic"
-            value="Story + Genre"
-            description="Recommendations compare narrative, genre, director, cast, rating, and popularity."
+            title="Hybrid Similarity"
+            value="ML + Taste"
+            description="Recommendations combine TF-IDF ML similarity with genre, director, cast, rating, and language signals."
           />
 
           <StatCard
             title="Global Discovery"
             value={movie.language || "World"}
-            description="Language helps discovery, but it is intentionally the lowest weighted signal."
+            description="Language helps discovery, but it is intentionally a supporting signal."
           />
 
           <StatCard
@@ -449,7 +463,7 @@ const loadRecommendations = async () => {
           <>
             <MovieRow
               title="Similar Taste Matches"
-              subtitle="Movies connected by story, genres, director, cast, quality, and popularity."
+              subtitle="Hybrid recommendations powered by ML similarity and cinematic taste signals."
               movies={recommendations}
               onViewMore={null}
             />
@@ -466,53 +480,36 @@ const loadRecommendations = async () => {
         <CreatorFollowPanel directors={directors} cast={cast} />
 
         <ReviewBox movie={movie} />
-        
+
         {cast.length > 0 && (
-  <section className="relative my-10 overflow-hidden rounded-[2rem] border border-blue-300/15 bg-gradient-to-br from-[#050914] via-[#07111F] to-[#0B1F2E] p-5 shadow-cardGlow md:p-6">
-    <div className="absolute -right-20 top-0 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
-    <div className="absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-teal-400/10 blur-3xl" />
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(96,165,250,0.10),transparent_35%)]" />
-
-    <div className="relative">
-      <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-200">
-          Ensemble Network
-        </p>
-
-        <h2 className="mt-2 font-display text-3xl font-bold text-white">
-          Full Cast
-        </h2>
-
-        <p className="mt-1 text-sm text-cinemaMuted">
-          The performers connected to this film’s cinematic world.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-        {cast.slice(0, 12).map((person, index) => (
-          <div
-            key={`${getName(person)}-${index}`}
-            className="group rounded-2xl border border-blue-300/10 bg-black/25 p-4 backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-blue-300/40 hover:bg-blue-400/10"
-          >
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-300/15 bg-blue-400/10 text-lg font-bold text-blue-200">
-              {getName(person)?.charAt(0) || "?"}
+          <section className="py-10">
+            <div className="mb-5">
+              <h2 className="font-display text-3xl font-bold text-white">
+                Cast
+              </h2>
+              <p className="mt-1 text-sm text-cinemaMuted">
+                Main performers connected to this movie.
+              </p>
             </div>
 
-            <p className="font-semibold text-white">
-              {getName(person)}
-            </p>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+              {cast.slice(0, 12).map((person, index) => (
+                <div
+                  key={`${getName(person)}-${index}`}
+                  className="rounded-2xl border border-cinemaBorder bg-cinemaCard p-4"
+                >
+                  <p className="font-semibold text-white">{getName(person)}</p>
 
-            {getCharacter(person) && (
-              <p className="mt-1 text-sm text-cinemaDim">
-                {getCharacter(person)}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-)}
+                  {getCharacter(person) && (
+                    <p className="mt-1 text-sm text-cinemaDim">
+                      {getCharacter(person)}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </section>
     </main>
   );

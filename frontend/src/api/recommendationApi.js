@@ -59,3 +59,13 @@ export const getActorRecommendations = async (limit = 10) => {
 
   return response.data;
 };
+
+export const getHybridMovieRecommendations = async (tmdbId, limit = 10) => {
+  const response = await axiosClient.get(`/recommendations/hybrid/movie/${tmdbId}`, {
+    params: {
+      limit
+    }
+  });
+
+  return response.data;
+};
