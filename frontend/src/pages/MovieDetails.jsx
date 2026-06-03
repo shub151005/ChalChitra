@@ -117,14 +117,26 @@ const MovieDetails = () => {
   const cast = useMemo(() => movie?.cast || movie?.cast_members || [], [movie]);
   const genres = useMemo(() => movie?.genres || [], [movie]);
 
-  const releaseYear = movie?.release_date
-    ? movie.release_date.slice(0, 4)
-    : "N/A";
-
+  const releaseYear = movie?.release_date ? movie.release_date.slice(0, 4) : "N/A";
   const rating =
     typeof movie?.rating === "number" ? movie.rating.toFixed(1) : "N/A";
-
   const runtime = movie?.runtime ? `${movie.runtime} min` : "N/A";
+
+  const loadMovie = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      setExpandMessage("");
+
+      const data = await getMovieDetails(tmdbId);
+      setMovie(data);
+    } catch (err) {
+      console.error("Movie detail loading failed:", err);
+      setError("Could not load movie details. Make sure backend is running.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadRecommendations = async () => {
     try {
@@ -142,7 +154,10 @@ const MovieDetails = () => {
         normalRecommendations = normalizeMovies(recommendationData.value);
       }
 
-      if (recommendationData.status === "rejected" || normalRecommendations.length === 0) {
+      if (
+        recommendationData.status === "rejected" ||
+        normalRecommendations.length === 0
+      ) {
         try {
           const fallbackData = await getMovieRecommendations(tmdbId, 10);
           normalRecommendations = normalizeMovies(fallbackData);
@@ -173,22 +188,6 @@ const MovieDetails = () => {
       setHiddenGems([]);
     } finally {
       setRecommendationLoading(false);
-    }
-  };
-
-  const loadMovie = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      setExpandMessage("");
-
-      const data = await getMovieDetails(tmdbId);
-      setMovie(data);
-    } catch (err) {
-      console.error("Movie detail loading failed:", err);
-      setError("Could not load movie details. Make sure backend is running.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -465,14 +464,14 @@ const MovieDetails = () => {
               title="Similar Taste Matches"
               subtitle="Hybrid recommendations powered by ML similarity and cinematic taste signals."
               movies={recommendations}
-              onViewMore={null}
+              onViewMore={() => navigate(`/movie/${tmdbId}/recommendations`)}
             />
 
             <MovieRow
               title="Hidden Gems Near This Movie"
               subtitle="Less obvious films with strong taste similarity and lower mainstream popularity."
               movies={hiddenGems}
-              onViewMore={null}
+              onViewMore={() => navigate(`/movie/${tmdbId}/hidden-gems`)}
             />
           </>
         )}
@@ -482,31 +481,46 @@ const MovieDetails = () => {
         <ReviewBox movie={movie} />
 
         {cast.length > 0 && (
-          <section className="py-10">
-            <div className="mb-5">
-              <h2 className="font-display text-3xl font-bold text-white">
-                Cast
-              </h2>
-              <p className="mt-1 text-sm text-cinemaMuted">
-                Main performers connected to this movie.
-              </p>
-            </div>
+          <section className="relative my-10 overflow-hidden rounded-[2rem] border border-blue-300/15 bg-gradient-to-br from-[#050914] via-[#07111F] to-[#0B1F2E] p-5 shadow-cardGlow md:p-6">
+            <div className="absolute -right-20 top-0 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
+            <div className="absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-teal-400/10 blur-3xl" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(96,165,250,0.10),transparent_35%)]" />
 
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-              {cast.slice(0, 12).map((person, index) => (
-                <div
-                  key={`${getName(person)}-${index}`}
-                  className="rounded-2xl border border-cinemaBorder bg-cinemaCard p-4"
-                >
-                  <p className="font-semibold text-white">{getName(person)}</p>
+            <div className="relative">
+              <div className="mb-6">
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-200">
+                  Ensemble Network
+                </p>
 
-                  {getCharacter(person) && (
-                    <p className="mt-1 text-sm text-cinemaDim">
-                      {getCharacter(person)}
-                    </p>
-                  )}
-                </div>
-              ))}
+                <h2 className="mt-2 font-display text-3xl font-bold text-white">
+                  Full Cast
+                </h2>
+
+                <p className="mt-1 text-sm text-cinemaMuted">
+                  The performers connected to this film’s cinematic world.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+                {cast.slice(0, 12).map((person, index) => (
+                  <div
+                    key={`${getName(person)}-${index}`}
+                    className="group rounded-2xl border border-blue-300/10 bg-black/25 p-4 backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-blue-300/40 hover:bg-blue-400/10"
+                  >
+                    <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-300/15 bg-blue-400/10 text-lg font-bold text-blue-200">
+                      {getName(person)?.charAt(0) || "?"}
+                    </div>
+
+                    <p className="font-semibold text-white">{getName(person)}</p>
+
+                    {getCharacter(person) && (
+                      <p className="mt-1 text-sm text-cinemaDim">
+                        {getCharacter(person)}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         )}
@@ -531,6 +545,7 @@ const DetailBlock = ({ icon: Icon, title, items, empty }) => {
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
       <div className="mb-3 flex items-center gap-2 text-cinemaGold">
         <Icon size={17} />
+
         <h3 className="text-sm font-bold uppercase tracking-[0.2em]">
           {title}
         </h3>
@@ -539,7 +554,10 @@ const DetailBlock = ({ icon: Icon, title, items, empty }) => {
       {cleanItems.length > 0 ? (
         <div className="space-y-2">
           {cleanItems.map((item, index) => (
-            <p key={`${item}-${index}`} className="text-sm leading-6 text-cinemaMuted">
+            <p
+              key={`${item}-${index}`}
+              className="text-sm leading-6 text-cinemaMuted"
+            >
               {item}
             </p>
           ))}

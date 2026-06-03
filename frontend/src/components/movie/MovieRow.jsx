@@ -2,10 +2,18 @@ import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import MovieCard from "./MovieCard";
 
-const MovieRow = ({ title, subtitle, movies = [], onViewMore }) => {
+const MovieRow = ({
+  title,
+  subtitle,
+  movies = [],
+  onViewMore,
+  limit = null
+}) => {
   if (!movies || movies.length === 0) {
     return null;
   }
+
+  const visibleMovies = limit ? movies.slice(0, limit) : movies;
 
   return (
     <section className="py-8">
@@ -30,6 +38,7 @@ const MovieRow = ({ title, subtitle, movies = [], onViewMore }) => {
 
         {onViewMore && (
           <button
+            type="button"
             onClick={onViewMore}
             className="flex items-center gap-1 rounded-full border border-cinemaBorder px-4 py-2 text-sm text-cinemaMuted transition hover:border-cinemaGold/50 hover:text-cinemaGold"
           >
@@ -40,7 +49,7 @@ const MovieRow = ({ title, subtitle, movies = [], onViewMore }) => {
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {movies.slice(0, 10).map((movie) => (
+        {visibleMovies.map((movie) => (
           <MovieCard
             key={`${movie.tmdb_id}-${movie.title}`}
             movie={movie}

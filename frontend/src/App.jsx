@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import MovieRecommendationList from "./pages/MovieRecommendationList";
 
 import { AuthProvider } from "./context/AuthContext";
 import AppLayout from "./components/layout/AppLayout";
@@ -22,6 +23,17 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
             <Route path="/movie/:tmdbId" element={<MovieDetails />} />
+            
+            <Route
+  path="/movie/:tmdbId/recommendations"
+  element={<MovieRecommendationList type="recommendations" />}
+/>
+
+<Route
+  path="/movie/:tmdbId/hidden-gems"
+  element={<MovieRecommendationList type="hidden-gems" />}
+/>
+
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
