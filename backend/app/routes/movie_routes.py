@@ -37,6 +37,13 @@ from app.services.catalog_service import (
     LANGUAGE_SEED_CODES
 )
 
+from app.services.discovery_service import (
+    get_award_winning_acclaimed_movies,
+    get_festival_favorite_movies,
+    get_global_hidden_gem_movies,
+    get_movies_by_genre_name
+)
+
 router = APIRouter(
     prefix="/movies",
     tags=["Movies"]
@@ -269,6 +276,59 @@ def available_languages():
         "languages": LANGUAGE_SEED_CODES,
         "total": len(LANGUAGE_SEED_CODES)
     }
+
+@router.get("/discover/award-winning")
+def award_winning_movies(
+    page: int = 1,
+    limit: int = Query(default=20, ge=1, le=40),
+    db: Session = Depends(get_db)
+):
+    return get_award_winning_acclaimed_movies(
+        db=db,
+        page=page,
+        limit=limit
+    )
+
+
+@router.get("/discover/festival-favorites")
+def festival_favorite_movies(
+    page: int = 1,
+    limit: int = Query(default=20, ge=1, le=40),
+    db: Session = Depends(get_db)
+):
+    return get_festival_favorite_movies(
+        db=db,
+        page=page,
+        limit=limit
+    )
+
+
+@router.get("/discover/global-hidden-gems")
+def global_hidden_gem_movies(
+    page: int = 1,
+    limit: int = Query(default=20, ge=1, le=40),
+    db: Session = Depends(get_db)
+):
+    return get_global_hidden_gem_movies(
+        db=db,
+        page=page,
+        limit=limit
+    )
+
+
+@router.get("/genre/{genre_name}")
+def genre_movies(
+    genre_name: str,
+    page: int = 1,
+    limit: int = Query(default=20, ge=1, le=40),
+    db: Session = Depends(get_db)
+):
+    return get_movies_by_genre_name(
+        db=db,
+        genre_name=genre_name,
+        page=page,
+        limit=limit
+    )
 
 
 @router.post("/{tmdb_id}/expand")

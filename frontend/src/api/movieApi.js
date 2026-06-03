@@ -56,3 +56,46 @@ export const expandMovieCatalog = async (tmdbId, detailLimit = 10) => {
 
   return response.data;
 };
+export const getAwardWinningMovies = async (page = 1, limit = 10) => {
+  const response = await axiosClient.get("/movies/discover/award-winning", {
+    params: {
+      page,
+      limit
+    }
+  });
+
+  return response.data;
+};
+
+export const getFestivalFavoriteMovies = async (page = 1, limit = 10) => {
+  const response = await axiosClient.get("/movies/discover/festival-favorites", {
+    params: {
+      page,
+      limit
+    }
+  });
+
+  return response.data;
+};
+
+export const getGlobalHiddenGemMovies = async (page = 1, limit = 10) => {
+  const response = await axiosClient.get("/movies/discover/global-hidden-gems", {
+    params: {
+      page,
+      limit
+    }
+  });
+
+  return response.data;
+};
+
+export const getGenreMovies = async (genreName, page = 1, limit = 10) => {
+  const response = await axiosClient.get(`/movies/genre/${genreName}`, {
+    params: {
+      page,
+      limit
+    }
+  });
+
+  return response.data;
+};

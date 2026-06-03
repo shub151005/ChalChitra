@@ -6,37 +6,69 @@ import { useNavigate } from "react-router-dom";
 import MovieRow from "../components/movie/MovieRow";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import ErrorMessage from "../components/ui/ErrorMessage";
-import { getTopRatedMovies, getTrendingMovies } from "../api/movieApi";
+import {
+  getTopRatedMovies,
+  getTrendingMovies,
+  getAwardWinningMovies,
+  getFestivalFavoriteMovies,
+  getGlobalHiddenGemMovies,
+  getGenreMovies
+} from "../api/movieApi";
 
 const Home = () => {
   const navigate = useNavigate();
 
   const [trendingMovies, setTrendingMovies] = useState([]);
   const [topRatedMovies, setTopRatedMovies] = useState([]);
+  const [awardMovies, setAwardMovies] = useState([]);
+  const [festivalMovies, setFestivalMovies] = useState([]);
+  const [romanceMovies, setRomanceMovies] = useState([]);
+  const [thrillerMovies, setThrillerMovies] = useState([]);
+  const [hiddenGemMovies, setHiddenGemMovies] = useState([]);
+
   const [homeLoading, setHomeLoading] = useState(true);
   const [homeError, setHomeError] = useState("");
 
-  const fetchHomeMovies = async () => {
+  const loadHomeMovies = async () => {
     try {
       setHomeLoading(true);
       setHomeError("");
 
-      const [trendingData, topRatedData] = await Promise.all([
-        getTrendingMovies(),
-        getTopRatedMovies(1)
+      const results = await Promise.allSettled([
+        getTrendingMovies(1),
+        getTopRatedMovies(1),
+        getAwardWinningMovies(1, 10),
+        getFestivalFavoriteMovies(1, 10),
+        getGenreMovies("romance", 1, 10),
+        getGenreMovies("thriller", 1, 10),
+        getGlobalHiddenGemMovies(1, 10)
       ]);
 
-      setTrendingMovies(trendingData.results || []);
-      setTopRatedMovies(topRatedData.results || []);
-    } catch (error) {
-      setHomeError("Could not load movie rows. Make sure the backend is running.");
+      const getResults = (index) => {
+        if (results[index].status !== "fulfilled") {
+          return [];
+        }
+
+        return results[index].value?.results || [];
+      };
+
+      setTrendingMovies(getResults(0));
+      setTopRatedMovies(getResults(1));
+      setAwardMovies(getResults(2));
+      setFestivalMovies(getResults(3));
+      setRomanceMovies(getResults(4));
+      setThrillerMovies(getResults(5));
+      setHiddenGemMovies(getResults(6));
+    } catch (err) {
+      console.error("Homepage loading failed:", err);
+      setHomeError("Could not load homepage movies.");
     } finally {
       setHomeLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchHomeMovies();
+    loadHomeMovies();
   }, []);
 
   return (
@@ -69,6 +101,7 @@ const Home = () => {
             </p>
 
             <button
+              type="button"
               onClick={() => navigate("/search")}
               className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-full border border-cinemaBorder bg-white/5 px-5 py-4 text-left text-cinemaMuted shadow-cardGlow backdrop-blur transition hover:border-cinemaGold/50 hover:bg-white/10"
             >
@@ -78,6 +111,7 @@ const Home = () => {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <button
+                type="button"
                 onClick={() => navigate("/search")}
                 className="rounded-full bg-cinemaGold px-6 py-3 font-bold text-black transition hover:bg-cinemaGoldSoft"
               >
@@ -85,6 +119,7 @@ const Home = () => {
               </button>
 
               <button
+                type="button"
                 onClick={() => navigate("/dashboard")}
                 className="rounded-full border border-cinemaBorder px-6 py-3 font-bold text-white transition hover:border-cinemaGold/60 hover:text-cinemaGold"
               >
@@ -128,56 +163,35 @@ const Home = () => {
                   <p className="text-xs uppercase tracking-[0.25em] text-cinemaGold">
                     Taste Match
                   </p>
+
                   <h3 className="mt-2 font-display text-3xl font-bold text-white">
                     Hidden Gems
                   </h3>
+
                   <p className="mt-2 text-sm leading-6 text-cinemaMuted">
                     Less obvious films ranked by your taste, quality, and lower mainstream popularity.
                   </p>
                 </div>
 
                 <div className="absolute bottom-6 left-6 right-6 space-y-3">
-                  <div className="rounded-2xl border border-cinemaGold/20 bg-cinemaGold/10 p-4 backdrop-blur">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-white">
-                        The Prestige
-                      </span>
-                      <span className="rounded-full bg-cinemaGold px-2 py-1 text-xs font-bold text-black">
-                        92%
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-cinemaMuted">
-                      Similar director, genre, and story tension.
-                    </p>
-                  </div>
+                  <HeroMiniCard
+                    title="The Prestige"
+                    tag="92%"
+                    description="Similar director, genre, and story tension."
+                    highlighted
+                  />
 
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-white">
-                        Arrival
-                      </span>
-                      <span className="text-xs text-cinemaGold">
-                        Sci-fi Drama
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-cinemaMuted">
-                      Global cinema recommendations beyond language.
-                    </p>
-                  </div>
+                  <HeroMiniCard
+                    title="Arrival"
+                    tag="Sci-fi Drama"
+                    description="Global cinema recommendations beyond language."
+                  />
 
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-white">
-                        Taste Profile
-                      </span>
-                      <span className="text-xs text-cinemaGold">
-                        Live
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-cinemaMuted">
-                      Genres, directors, actors, and watch behavior.
-                    </p>
-                  </div>
+                  <HeroMiniCard
+                    title="Taste Profile"
+                    tag="Live"
+                    description="Genres, directors, actors, and watch behavior."
+                  />
                 </div>
               </div>
             </div>
@@ -201,22 +215,85 @@ const Home = () => {
         {!homeLoading && !homeError && (
           <>
             <MovieRow
-             title="Trending Worldwide"
-             subtitle="Popular films people are watching right now."
-             movies={trendingMovies.slice(0, 8)}
-             onViewMore={() => navigate("/search?section=trending")}
+              title="Trending Worldwide"
+              subtitle="Popular films people are watching right now."
+              movies={trendingMovies.slice(0, 8)}
+              onViewMore={() => navigate("/search?section=trending")}
             />
 
             <MovieRow
-             title="Top Rated Classics"
+              title="Top Rated Classics"
               subtitle="High-rated films to start your discovery journey."
-             movies={topRatedMovies.slice(0, 8)}
+              movies={topRatedMovies.slice(0, 8)}
               onViewMore={() => navigate("/search?section=top-rated")}
-            /> 
+            />
+
+            <MovieRow
+              title="Award-Winning & Acclaimed"
+              subtitle="Highly rated cinema selected from ChalChitra’s cached global catalog."
+              movies={awardMovies.slice(0, 10)}
+              onViewMore={() => navigate("/search?section=award-winning")}
+            />
+
+            <MovieRow
+              title="Festival & Art-House Favorites"
+              subtitle="Lower-mainstream films with strong ratings and global discovery value."
+              movies={festivalMovies.slice(0, 10)}
+              onViewMore={() => navigate("/search?section=festival-favorites")}
+            />
+
+            <MovieRow
+              title="Romance & Emotional Dramas"
+              subtitle="Stories centered on love, longing, memory, and human connection."
+              movies={romanceMovies.slice(0, 10)}
+              onViewMore={() => navigate("/search?section=romance")}
+            />
+
+            <MovieRow
+              title="Thrillers & Psychological Cinema"
+              subtitle="Tense, mysterious, and psychologically charged cinema."
+              movies={thrillerMovies.slice(0, 10)}
+              onViewMore={() => navigate("/search?section=thriller")}
+            />
+
+            <MovieRow
+              title="Global Hidden Gems"
+              subtitle="Less obvious films with strong ratings and lower mainstream popularity."
+              movies={hiddenGemMovies.slice(0, 10)}
+              onViewMore={() => navigate("/search?section=global-hidden-gems")}
+            />
           </>
         )}
       </section>
     </>
+  );
+};
+
+const HeroMiniCard = ({ title, tag, description, highlighted = false }) => {
+  return (
+    <div
+      className={
+        highlighted
+          ? "rounded-2xl border border-cinemaGold/20 bg-cinemaGold/10 p-4 backdrop-blur"
+          : "rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur"
+      }
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-white">{title}</span>
+
+        <span
+          className={
+            highlighted
+              ? "rounded-full bg-cinemaGold px-2 py-1 text-xs font-bold text-black"
+              : "text-xs text-cinemaGold"
+          }
+        >
+          {tag}
+        </span>
+      </div>
+
+      <p className="mt-1 text-xs text-cinemaMuted">{description}</p>
+    </div>
   );
 };
 
