@@ -16,9 +16,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,12 +39,14 @@ app.include_router(user_router)
 @app.get("/")
 def root():
     return {
-        "message": "Welcome to ChalChitra API"
+        "message": "ChalChitra backend is running",
+        "status": "ok"
     }
 
 
 @app.get("/health")
 def health_check():
     return {
-        "status": "healthy"
+        "status": "healthy",
+        "service": "chalchitra-backend"
     }
