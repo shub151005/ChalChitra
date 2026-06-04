@@ -73,11 +73,11 @@ const Home = () => {
 
   return (
     <>
-      <section className="relative min-h-screen overflow-hidden px-4 py-20 md:px-8">
+      <section className="relative min-h-screen overflow-hidden px-4 py-16 md:px-8 md:py-20">
         <div className="absolute inset-0 bg-cinemaGradient" />
-
-        <div className="absolute left-[20%] top-24 h-72 w-72 rounded-full bg-cinemaGold/10 blur-3xl" />
-        <div className="absolute right-[12%] top-40 h-80 w-80 rounded-full bg-cinemaRed/10 blur-3xl" />
+        <div className="absolute left-[12%] top-24 h-72 w-72 rounded-full bg-cinemaGold/10 blur-3xl" />
+        <div className="absolute right-[8%] top-44 h-80 w-80 rounded-full bg-cinemaRed/10 blur-3xl" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-cinemaBlack to-transparent" />
 
         <div className="relative mx-auto grid min-h-[78vh] max-w-7xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
           <motion.div
@@ -86,7 +86,7 @@ const Home = () => {
             transition={{ duration: 0.7 }}
             className="max-w-3xl"
           >
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.35em] text-cinemaGold">
+            <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-cinemaGold md:text-sm">
               Global Cinema Discovery
             </p>
 
@@ -95,7 +95,7 @@ const Home = () => {
               <span className="gold-text">taste.</span>
             </h1>
 
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-cinemaMuted">
+            <p className="mt-6 max-w-2xl text-base leading-7 text-cinemaMuted md:text-lg md:leading-8">
               Discover films through story, genre, directors, actors, hidden gems,
               and global cinema connections — powered by a hybrid recommendation engine.
             </p>
@@ -105,8 +105,10 @@ const Home = () => {
               onClick={() => navigate("/search")}
               className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-full border border-cinemaBorder bg-white/5 px-5 py-4 text-left text-cinemaMuted shadow-cardGlow backdrop-blur transition hover:border-cinemaGold/50 hover:bg-white/10"
             >
-              <Search size={20} className="text-cinemaGold" />
-              <span>Search The Shining, Parasite, Aamis, La La Land...</span>
+              <Search size={20} className="shrink-0 text-cinemaGold" />
+              <span className="line-clamp-1">
+                Search The Shining, Parasite, Aamis, La La Land...
+              </span>
             </button>
 
             <div className="mt-8 flex flex-wrap gap-4">
@@ -152,7 +154,6 @@ const Home = () => {
             className="relative hidden lg:block"
           >
             <div className="absolute -left-8 top-10 h-72 w-48 rotate-[-8deg] rounded-3xl border border-cinemaBorder bg-gradient-to-br from-cinemaGold/20 to-white/5 shadow-cardGlow" />
-
             <div className="absolute right-0 top-0 h-72 w-48 rotate-[8deg] rounded-3xl border border-cinemaBorder bg-gradient-to-br from-cinemaRed/20 to-white/5 shadow-cardGlow" />
 
             <div className="glass-panel relative mx-auto max-w-md rounded-[2rem] p-5 shadow-cinemaGlow">
@@ -213,63 +214,70 @@ const Home = () => {
         )}
 
         {!homeLoading && !homeError && (
-          <>
+          <div className="space-y-2">
             <MovieRow
-  title="Trending Worldwide"
-  subtitle="Popular films people are watching right now."
-  movies={trendingMovies.slice(0, 8)}
-  onViewMore={() => navigate("/discover/trending")}
-/>
+              title="Trending Worldwide"
+              subtitle="Popular films people are watching right now."
+              movies={trendingMovies}
+              limit={8}
+              showCount
+              onViewMore={() => navigate("/discover/trending")}
+            />
 
-<MovieRow
-  title="Top Rated Classics"
-  subtitle="High-rated films to start your discovery journey."
-  movies={topRatedMovies.slice(0, 8)}
-  onViewMore={() => navigate("/discover/top-rated")}
-/>
+            <MovieRow
+              title="Top Rated Classics"
+              subtitle="High-rated films to start your discovery journey."
+              movies={topRatedMovies}
+              limit={8}
+              showCount
+              onViewMore={() => navigate("/discover/top-rated")}
+            />
 
-<MovieRow
-  title="Award-Winning & Acclaimed"
-  subtitle="Highly rated cinema selected from ChalChitra’s cached global catalog."
-  movies={awardMovies.slice(0, 10)}
-  onViewMore={() => navigate("/discover/award-winning")}
-/>
+            <MovieRow
+              title="Award-Winning & Acclaimed"
+              subtitle="Highly rated cinema selected from ChalChitra’s cached global catalog."
+              movies={awardMovies}
+              limit={10}
+              showCount
+              onViewMore={() => navigate("/discover/award-winning")}
+            />
 
-<MovieRow
-  title="Festival & Art-House Favorites"
-  subtitle="Lower-mainstream films with strong ratings and global discovery value."
-  movies={festivalMovies.slice(0, 10)}
-  onViewMore={() => navigate("/discover/festival-favorites")}
-/>
+            <MovieRow
+              title="Festival & Art-House Favorites"
+              subtitle="Lower-mainstream films with strong ratings and global discovery value."
+              movies={festivalMovies}
+              limit={10}
+              showCount
+              onViewMore={() => navigate("/discover/festival-favorites")}
+            />
 
-<MovieRow
-  title="Romance & Emotional Dramas"
-  subtitle="Stories centered on love, longing, memory, and human connection."
-  movies={romanceMovies.slice(0, 10)}
-  onViewMore={() => navigate("/discover/romance")}
-/>
+            <MovieRow
+              title="Romance & Emotional Dramas"
+              subtitle="Stories centered on love, longing, memory, and human connection."
+              movies={romanceMovies}
+              limit={10}
+              showCount
+              onViewMore={() => navigate("/discover/romance")}
+            />
 
-<MovieRow
-  title="Thrillers & Psychological Cinema"
-  subtitle="Tense, mysterious, and psychologically charged cinema."
-  movies={thrillerMovies.slice(0, 10)}
-  onViewMore={() => navigate("/discover/thriller")}
-/>
-
-<MovieRow
-  title="Global Hidden Gems"
-  subtitle="Less obvious films with strong ratings and lower mainstream popularity."
-  movies={hiddenGemMovies.slice(0, 10)}
-  onViewMore={() => navigate("/discover/global-hidden-gems")}
-/>
+            <MovieRow
+              title="Thrillers & Psychological Cinema"
+              subtitle="Tense, mysterious, and psychologically charged cinema."
+              movies={thrillerMovies}
+              limit={10}
+              showCount
+              onViewMore={() => navigate("/discover/thriller")}
+            />
 
             <MovieRow
               title="Global Hidden Gems"
               subtitle="Less obvious films with strong ratings and lower mainstream popularity."
-              movies={hiddenGemMovies.slice(0, 10)}
+              movies={hiddenGemMovies}
+              limit={10}
+              showCount
               onViewMore={() => navigate("/discover/global-hidden-gems")}
             />
-          </>
+          </div>
         )}
       </section>
     </>
@@ -285,7 +293,7 @@ const HeroMiniCard = ({ title, tag, description, highlighted = false }) => {
           : "rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur"
       }
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-semibold text-white">{title}</span>
 
         <span

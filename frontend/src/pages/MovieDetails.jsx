@@ -13,7 +13,8 @@ import {
   PenLine,
   Clapperboard,
   WandSparkles,
-  RefreshCcw
+  RefreshCcw,
+  Film
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -39,6 +40,12 @@ const getCharacter = (person) => {
   return person.character || person.job || "";
 };
 
+const getGenreName = (genre) => {
+  if (!genre) return "";
+  if (typeof genre === "string") return genre;
+  return genre.name || genre.title || "";
+};
+
 const normalizeMovies = (data) => {
   if (!data) return [];
 
@@ -54,6 +61,8 @@ const normalizeMovies = (data) => {
       data.movies ||
       [];
   }
+
+  const seenIds = new Set();
 
   return movieList
     .map((item) => {
@@ -94,7 +103,13 @@ const normalizeMovies = (data) => {
 
       return null;
     })
-    .filter((movie) => movie && movie.tmdb_id);
+    .filter((movie) => {
+      if (!movie || !movie.tmdb_id) return false;
+      if (seenIds.has(movie.tmdb_id)) return false;
+
+      seenIds.add(movie.tmdb_id);
+      return true;
+    });
 };
 
 const MovieDetails = () => {
@@ -119,7 +134,9 @@ const MovieDetails = () => {
 
   const releaseYear = movie?.release_date ? movie.release_date.slice(0, 4) : "N/A";
   const rating =
-    typeof movie?.rating === "number" ? movie.rating.toFixed(1) : "N/A";
+    typeof movie?.rating === "number" && movie.rating > 0
+      ? movie.rating.toFixed(1)
+      : "N/A";
   const runtime = movie?.runtime ? `${movie.runtime} min` : "N/A";
 
   const loadMovie = async () => {
@@ -171,11 +188,11 @@ const MovieDetails = () => {
       }
 
       const recommendationIds = new Set(
-        normalRecommendations.map((movie) => movie.tmdb_id)
+        normalRecommendations.map((item) => item.tmdb_id)
       );
 
       const uniqueHiddenGems = normalHiddenGems.filter(
-        (movie) => !recommendationIds.has(movie.tmdb_id)
+        (item) => !recommendationIds.has(item.tmdb_id)
       );
 
       setRecommendations(normalRecommendations);
@@ -211,6 +228,7 @@ const MovieDetails = () => {
 
       await loadRecommendations();
     } catch (err) {
+      console.error("Catalog expansion failed:", err);
       setExpandMessage("Catalog expansion failed. Try again after checking backend.");
     } finally {
       setExpanding(false);
@@ -232,8 +250,10 @@ const MovieDetails = () => {
 
   if (error) {
     return (
-      <section className="mx-auto min-h-screen max-w-5xl bg-cinemaBlack px-4 py-20 md:px-8">
-        <ErrorMessage message={error} />
+      <section className="min-h-screen bg-cinemaBlack px-4 py-20 md:px-8">
+        <div className="mx-auto max-w-5xl">
+          <ErrorMessage message={error} />
+        </div>
       </section>
     );
   }
@@ -255,7 +275,7 @@ const MovieDetails = () => {
           <div className="absolute inset-0 bg-cinemaGradient" />
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/35" />
         <div className="absolute inset-0 bg-gradient-to-t from-cinemaBlack via-transparent to-black/50" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(20,184,166,0.20),transparent_30%)]" />
 
@@ -286,12 +306,12 @@ const MovieDetails = () => {
                 </span>
               </div>
 
-              <h1 className="font-display text-5xl font-extrabold leading-[0.95] text-white md:text-7xl">
+              <h1 className="font-display text-4xl font-extrabold leading-tight text-white md:text-7xl">
                 {movie.title}
               </h1>
 
               {movie.original_title && movie.original_title !== movie.title && (
-                <p className="mt-3 text-lg text-cinemaMuted">
+                <p className="mt-3 text-base text-cinemaMuted md:text-lg">
                   Original title: {movie.original_title}
                 </p>
               )}
@@ -303,20 +323,26 @@ const MovieDetails = () => {
                 <InfoPill icon={Clapperboard} label={releaseYear} />
               </div>
 
-              <p className="mt-8 max-w-3xl text-lg leading-8 text-cinemaMuted">
+              <p className="mt-8 max-w-3xl text-base leading-7 text-cinemaMuted md:text-lg md:leading-8">
                 {movie.description || "No overview available for this movie."}
               </p>
 
               <div className="mt-7 flex flex-wrap gap-2">
                 {genres.length > 0 ? (
-                  genres.map((genre) => (
-                    <span
-                      key={genre}
-                      className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white backdrop-blur"
-                    >
-                      {genre}
-                    </span>
-                  ))
+                  genres.map((genre, index) => {
+                    const genreName = getGenreName(genre);
+
+                    if (!genreName) return null;
+
+                    return (
+                      <span
+                        key={`${genreName}-${index}`}
+                        className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white backdrop-blur"
+                      >
+                        {genreName}
+                      </span>
+                    );
+                  })
                 ) : (
                   <span className="text-sm text-cinemaDim">
                     No genres available
@@ -333,7 +359,11 @@ const MovieDetails = () => {
                   disabled={expanding}
                   className="flex items-center gap-2 rounded-full border border-cinemaGold/40 bg-black/30 px-6 py-3 font-bold text-cinemaGold backdrop-blur transition hover:bg-cinemaGold hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {expanding ? <RefreshCcw size={18} /> : <WandSparkles size={18} />}
+                  {expanding ? (
+                    <RefreshCcw size={18} className="animate-spin" />
+                  ) : (
+                    <WandSparkles size={18} />
+                  )}
                   {expanding ? "Expanding Catalog..." : "Expand Recommendations"}
                 </button>
 
@@ -372,7 +402,8 @@ const MovieDetails = () => {
                     className="aspect-[2/3] w-full object-cover"
                   />
                 ) : (
-                  <div className="flex aspect-[2/3] items-center justify-center text-cinemaDim">
+                  <div className="flex aspect-[2/3] flex-col items-center justify-center gap-3 text-cinemaDim">
+                    <Film size={34} />
                     No Poster
                   </div>
                 )}
@@ -411,7 +442,7 @@ const MovieDetails = () => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 md:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-14 md:px-8 md:py-16">
         <div className="mb-10 grid gap-5 lg:grid-cols-[420px_1fr]">
           <RatingBox movie={movie} />
 
@@ -464,6 +495,8 @@ const MovieDetails = () => {
               title="Similar Taste Matches"
               subtitle="Hybrid recommendations powered by ML similarity and cinematic taste signals."
               movies={recommendations}
+              limit={10}
+              showCount
               onViewMore={() => navigate(`/movie/${tmdbId}/recommendations`)}
             />
 
@@ -471,6 +504,8 @@ const MovieDetails = () => {
               title="Hidden Gems Near This Movie"
               subtitle="Less obvious films with strong taste similarity and lower mainstream popularity."
               movies={hiddenGems}
+              limit={10}
+              showCount
               onViewMore={() => navigate(`/movie/${tmdbId}/hidden-gems`)}
             />
           </>
@@ -481,46 +516,36 @@ const MovieDetails = () => {
         <ReviewBox movie={movie} />
 
         {cast.length > 0 && (
-          <section className="relative my-10 overflow-hidden rounded-[2rem] border border-blue-300/15 bg-gradient-to-br from-[#050914] via-[#07111F] to-[#0B1F2E] p-5 shadow-cardGlow md:p-6">
-            <div className="absolute -right-20 top-0 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
-            <div className="absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-teal-400/10 blur-3xl" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(96,165,250,0.10),transparent_35%)]" />
+          <section className="py-10">
+            <div className="mb-5">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.25em] text-cinemaGold">
+                Ensemble
+              </p>
 
-            <div className="relative">
-              <div className="mb-6">
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-200">
-                  Ensemble Network
-                </p>
+              <h2 className="font-display text-3xl font-bold text-white">
+                Cast
+              </h2>
 
-                <h2 className="mt-2 font-display text-3xl font-bold text-white">
-                  Full Cast
-                </h2>
+              <p className="mt-1 text-sm text-cinemaMuted">
+                Main performers connected to this movie.
+              </p>
+            </div>
 
-                <p className="mt-1 text-sm text-cinemaMuted">
-                  The performers connected to this film’s cinematic world.
-                </p>
-              </div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+              {cast.slice(0, 12).map((person, index) => (
+                <div
+                  key={`${getName(person)}-${index}`}
+                  className="rounded-2xl border border-cinemaBorder bg-cinemaCard p-4 transition hover:border-cinemaGold/40"
+                >
+                  <p className="font-semibold text-white">{getName(person)}</p>
 
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-                {cast.slice(0, 12).map((person, index) => (
-                  <div
-                    key={`${getName(person)}-${index}`}
-                    className="group rounded-2xl border border-blue-300/10 bg-black/25 p-4 backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-blue-300/40 hover:bg-blue-400/10"
-                  >
-                    <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-300/15 bg-blue-400/10 text-lg font-bold text-blue-200">
-                      {getName(person)?.charAt(0) || "?"}
-                    </div>
-
-                    <p className="font-semibold text-white">{getName(person)}</p>
-
-                    {getCharacter(person) && (
-                      <p className="mt-1 text-sm text-cinemaDim">
-                        {getCharacter(person)}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  {getCharacter(person) && (
+                    <p className="mt-1 text-sm text-cinemaDim">
+                      {getCharacter(person)}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
           </section>
         )}
@@ -545,7 +570,6 @@ const DetailBlock = ({ icon: Icon, title, items, empty }) => {
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
       <div className="mb-3 flex items-center gap-2 text-cinemaGold">
         <Icon size={17} />
-
         <h3 className="text-sm font-bold uppercase tracking-[0.2em]">
           {title}
         </h3>

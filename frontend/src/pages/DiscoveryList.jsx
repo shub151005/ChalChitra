@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Compass, Loader2 } from "lucide-react";
+import { ArrowLeft, Compass, Film, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import MovieCard from "../components/movie/MovieCard";
@@ -20,13 +20,8 @@ const removeDuplicateMovies = (movies) => {
   const seenIds = new Set();
 
   return movies.filter((movie) => {
-    if (!movie || !movie.tmdb_id) {
-      return false;
-    }
-
-    if (seenIds.has(movie.tmdb_id)) {
-      return false;
-    }
+    if (!movie || !movie.tmdb_id) return false;
+    if (seenIds.has(movie.tmdb_id)) return false;
 
     seenIds.add(movie.tmdb_id);
     return true;
@@ -65,40 +60,47 @@ const DiscoveryList = ({ type = "trending" }) => {
       trending: {
         title: "Trending Worldwide",
         subtitle: "Popular films people are watching right now across the world.",
-        label: "Live Discovery"
+        label: "Live Discovery",
+        mood: "A real-time window into what global audiences are exploring."
       },
       "top-rated": {
         title: "Top Rated Classics",
         subtitle: "High-rated films from ChalChitra’s global cinema catalog.",
-        label: "Classic Discovery"
+        label: "Classic Discovery",
+        mood: "A curated shelf of acclaimed films with lasting cinematic value."
       },
       "award-winning": {
         title: "Award-Winning & Acclaimed",
         subtitle:
           "Highly rated and critically acclaimed cinema selected from ChalChitra’s cached global catalog.",
-        label: "Acclaimed Cinema"
+        label: "Acclaimed Cinema",
+        mood: "For users who want reputation, craft, and critical strength."
       },
       "festival-favorites": {
         title: "Festival & Art-House Favorites",
         subtitle:
           "Lower-mainstream films with strong ratings and global discovery value.",
-        label: "Art-House Discovery"
+        label: "Art-House Discovery",
+        mood: "A quieter lane for expressive, global, and festival-style cinema."
       },
       romance: {
         title: "Romance & Emotional Dramas",
         subtitle: "Stories centered on love, longing, memory, and human connection.",
-        label: "Genre Discovery"
+        label: "Genre Discovery",
+        mood: "Films shaped by intimacy, heartbreak, tenderness, and emotional memory."
       },
       thriller: {
         title: "Thrillers & Psychological Cinema",
         subtitle: "Tense, mysterious, and psychologically charged cinema.",
-        label: "Genre Discovery"
+        label: "Genre Discovery",
+        mood: "For suspense, obsession, danger, mystery, and psychological tension."
       },
       "global-hidden-gems": {
         title: "Global Hidden Gems",
         subtitle:
           "Less obvious films with strong ratings and lower mainstream popularity.",
-        label: "Hidden Gem Discovery"
+        label: "Hidden Gem Discovery",
+        mood: "A discovery-first section for films outside the loud mainstream."
       }
     };
 
@@ -106,26 +108,11 @@ const DiscoveryList = ({ type = "trending" }) => {
   }, [type]);
 
   const fetchDiscoveryPage = async (pageNumber) => {
-    if (type === "trending") {
-      return getTrendingMovies(pageNumber);
-    }
-
-    if (type === "top-rated") {
-      return getTopRatedMovies(pageNumber);
-    }
-
-    if (type === "award-winning") {
-      return getAwardWinningMovies(pageNumber, PAGE_SIZE);
-    }
-
-    if (type === "festival-favorites") {
-      return getFestivalFavoriteMovies(pageNumber, PAGE_SIZE);
-    }
-
-    if (type === "global-hidden-gems") {
-      return getGlobalHiddenGemMovies(pageNumber, PAGE_SIZE);
-    }
-
+    if (type === "trending") return getTrendingMovies(pageNumber);
+    if (type === "top-rated") return getTopRatedMovies(pageNumber);
+    if (type === "award-winning") return getAwardWinningMovies(pageNumber, PAGE_SIZE);
+    if (type === "festival-favorites") return getFestivalFavoriteMovies(pageNumber, PAGE_SIZE);
+    if (type === "global-hidden-gems") return getGlobalHiddenGemMovies(pageNumber, PAGE_SIZE);
     if (type === "romance" || type === "thriller") {
       return getGenreMovies(type, pageNumber, PAGE_SIZE);
     }
@@ -147,10 +134,7 @@ const DiscoveryList = ({ type = "trending" }) => {
     ]);
 
     const combinedMovies = results.flatMap((result) => {
-      if (result.status !== "fulfilled") {
-        return [];
-      }
-
+      if (result.status !== "fulfilled") return [];
       return normalizeMovies(result.value);
     });
 
@@ -161,32 +145,19 @@ const DiscoveryList = ({ type = "trending" }) => {
 
   const loadMovies = async (pageNumber = 1, append = false) => {
     try {
-      if (append) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
-
+      append ? setLoadingMore(true) : setLoading(true);
       setError("");
 
       const data = await fetchLargeSectionPage(pageNumber);
       const newMovies = normalizeMovies(data);
 
       setMovies((prevMovies) => {
-        if (!append) {
-          return newMovies;
-        }
-
+        if (!append) return newMovies;
         return removeDuplicateMovies([...prevMovies, ...newMovies]);
       });
 
       setPage(pageNumber);
-
-      if (newMovies.length < PAGE_SIZE) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
+      setHasMore(newMovies.length >= PAGE_SIZE);
     } catch (err) {
       console.error("Discovery page loading failed:", err);
       setError("Could not load this discovery section. Make sure backend is running.");
@@ -197,7 +168,9 @@ const DiscoveryList = ({ type = "trending" }) => {
   };
 
   const handleLoadMore = () => {
-    loadMovies(page + 1, true);
+    if (!loadingMore) {
+      loadMovies(page + 1, true);
+    }
   };
 
   useEffect(() => {
@@ -217,18 +190,30 @@ const DiscoveryList = ({ type = "trending" }) => {
 
   if (error) {
     return (
-      <section className="mx-auto min-h-screen max-w-5xl bg-cinemaBlack px-4 py-20 md:px-8">
-        <ErrorMessage message={error} />
+      <section className="min-h-screen bg-cinemaBlack px-4 py-20 md:px-8">
+        <div className="mx-auto max-w-5xl">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="mb-8 flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-cinemaMuted transition hover:border-cinemaGold/50 hover:text-cinemaGold"
+          >
+            <ArrowLeft size={17} />
+            Back to home
+          </button>
+
+          <ErrorMessage message={error} />
+        </div>
       </section>
     );
   }
 
   return (
     <main className="min-h-screen bg-cinemaBlack">
-      <section className="relative overflow-hidden border-b border-cinemaBorder px-4 py-16 md:px-8">
+      <section className="relative overflow-hidden border-b border-cinemaBorder px-4 py-14 md:px-8 md:py-20">
         <div className="absolute inset-0 bg-cinemaGradient" />
-        <div className="absolute left-[15%] top-10 h-72 w-72 rounded-full bg-cinemaGold/10 blur-3xl" />
-        <div className="absolute right-[10%] bottom-0 h-80 w-80 rounded-full bg-cinemaRed/10 blur-3xl" />
+        <div className="absolute left-[8%] top-8 h-72 w-72 rounded-full bg-cinemaGold/10 blur-3xl" />
+        <div className="absolute right-[6%] bottom-0 h-80 w-80 rounded-full bg-cinemaRed/10 blur-3xl" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-cinemaBlack to-transparent" />
 
         <div className="relative mx-auto max-w-7xl">
           <button
@@ -245,24 +230,56 @@ const DiscoveryList = ({ type = "trending" }) => {
             {pageConfig.label}
           </p>
 
-          <h1 className="mt-4 font-display text-4xl font-bold text-white md:text-6xl">
-            {pageConfig.title}
-          </h1>
+          <div className="mt-5 grid gap-8 lg:grid-cols-[1.4fr_0.6fr] lg:items-end">
+            <div>
+              <h1 className="font-display text-4xl font-bold leading-tight text-white md:text-6xl">
+                {pageConfig.title}
+              </h1>
 
-          <p className="mt-4 max-w-3xl text-lg leading-8 text-cinemaMuted">
-            {pageConfig.subtitle}
-          </p>
+              <p className="mt-4 max-w-3xl text-base leading-7 text-cinemaMuted md:text-lg md:leading-8">
+                {pageConfig.subtitle}
+              </p>
+            </div>
 
-          <p className="mt-3 text-sm text-cinemaDim">
-            Showing {movies.length} movies
-          </p>
+            <div className="rounded-3xl border border-white/10 bg-black/25 p-5 backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-cinemaGold">
+                Section Mood
+              </p>
+
+              <p className="mt-3 text-sm leading-6 text-cinemaMuted">
+                {pageConfig.mood}
+              </p>
+
+              <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
+                <span className="text-xs uppercase tracking-[0.2em] text-cinemaDim">
+                  Loaded
+                </span>
+
+                <span className="font-display text-2xl font-bold text-white">
+                  {movies.length}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-12 md:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-10 md:px-8 md:py-14">
         {movies.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="mb-6 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-cinemaGold">
+                  Browse Collection
+                </p>
+
+                <p className="mt-2 text-sm text-cinemaDim">
+                  Showing {movies.length} curated movies
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {movies.map((movie) => (
                 <MovieCard
                   key={`${movie.tmdb_id}-${movie.title}`}
@@ -277,17 +294,27 @@ const DiscoveryList = ({ type = "trending" }) => {
                   type="button"
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="flex items-center gap-2 rounded-full border border-cinemaGold/40 px-7 py-3 font-bold text-cinemaGold transition hover:bg-cinemaGold hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex items-center gap-2 rounded-full border border-cinemaGold/40 bg-cinemaGold/5 px-8 py-3 font-bold text-cinemaGold transition hover:bg-cinemaGold hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loadingMore && <Loader2 size={18} className="animate-spin" />}
-                  {loadingMore ? "Loading..." : "Load More"}
+                  {loadingMore ? "Loading 50 more..." : "Load More"}
                 </button>
               </div>
             )}
           </>
         ) : (
-          <div className="glass-panel rounded-3xl p-8 text-center text-cinemaMuted">
-            No movies found in this discovery section yet.
+          <div className="rounded-3xl border border-white/10 bg-cinemaPanel p-10 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-cinemaGold/20 bg-cinemaGold/10 text-cinemaGold">
+              <Film size={26} />
+            </div>
+
+            <h2 className="font-display text-2xl font-bold text-white">
+              No movies found
+            </h2>
+
+            <p className="mt-3 text-cinemaMuted">
+              This discovery section does not have enough cached movies yet.
+            </p>
           </div>
         )}
       </section>
