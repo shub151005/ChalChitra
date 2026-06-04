@@ -1,4 +1,5 @@
 from app.services.hybrid_recommendation_service import build_hybrid_movie_recommendations
+from app.services.hybrid_hidden_gem_service import build_hybrid_hidden_gems_for_movie
 from app.services.ml_recommendation_service import get_ml_similar_movies
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -83,29 +84,11 @@ def hidden_gems(
     limit: int = 10,
     db: Session = Depends(get_db)
 ):
-    raw_recommendations = get_movie_recommendations(
+    return build_hybrid_hidden_gems_for_movie(
         db=db,
         tmdb_id=tmdb_id,
-        limit=max(limit * 4, 40)
+        limit=limit
     )
-
-    similar_results = build_similar_taste_results(
-        raw_movies=raw_recommendations,
-        limit=max(limit, 10)
-    )
-
-    hidden_results = build_hidden_gem_results(
-        raw_movies=raw_recommendations,
-        similar_movies=similar_results,
-        limit=limit,
-        exclude_top_similar_count=5
-    )
-
-    return {
-        "results": hidden_results,
-        "hidden_gems": hidden_results,
-        "type": "hidden_gems"
-    }
 
 
 @router.get("/me")
