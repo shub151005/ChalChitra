@@ -215,52 +215,59 @@ const Home = () => {
         {!homeLoading && !homeError && (
           <>
             <MovieRow
-              title="Trending Worldwide"
-              subtitle="Popular films people are watching right now."
-              movies={trendingMovies.slice(0, 8)}
-              onViewMore={() => navigate("/search?section=trending")}
-            />
+  title="Trending Worldwide"
+  subtitle="Popular films people are watching right now."
+  movies={trendingMovies.slice(0, 8)}
+  onViewMore={() => navigate("/discover/trending")}
+/>
 
-            <MovieRow
-              title="Top Rated Classics"
-              subtitle="High-rated films to start your discovery journey."
-              movies={topRatedMovies.slice(0, 8)}
-              onViewMore={() => navigate("/search?section=top-rated")}
-            />
+<MovieRow
+  title="Top Rated Classics"
+  subtitle="High-rated films to start your discovery journey."
+  movies={topRatedMovies.slice(0, 8)}
+  onViewMore={() => navigate("/discover/top-rated")}
+/>
 
-            <MovieRow
-              title="Award-Winning & Acclaimed"
-              subtitle="Highly rated cinema selected from ChalChitra’s cached global catalog."
-              movies={awardMovies.slice(0, 10)}
-              onViewMore={() => navigate("/search?section=award-winning")}
-            />
+<MovieRow
+  title="Award-Winning & Acclaimed"
+  subtitle="Highly rated cinema selected from ChalChitra’s cached global catalog."
+  movies={awardMovies.slice(0, 10)}
+  onViewMore={() => navigate("/discover/award-winning")}
+/>
 
-            <MovieRow
-              title="Festival & Art-House Favorites"
-              subtitle="Lower-mainstream films with strong ratings and global discovery value."
-              movies={festivalMovies.slice(0, 10)}
-              onViewMore={() => navigate("/search?section=festival-favorites")}
-            />
+<MovieRow
+  title="Festival & Art-House Favorites"
+  subtitle="Lower-mainstream films with strong ratings and global discovery value."
+  movies={festivalMovies.slice(0, 10)}
+  onViewMore={() => navigate("/discover/festival-favorites")}
+/>
 
-            <MovieRow
-              title="Romance & Emotional Dramas"
-              subtitle="Stories centered on love, longing, memory, and human connection."
-              movies={romanceMovies.slice(0, 10)}
-              onViewMore={() => navigate("/search?section=romance")}
-            />
+<MovieRow
+  title="Romance & Emotional Dramas"
+  subtitle="Stories centered on love, longing, memory, and human connection."
+  movies={romanceMovies.slice(0, 10)}
+  onViewMore={() => navigate("/discover/romance")}
+/>
 
-            <MovieRow
-              title="Thrillers & Psychological Cinema"
-              subtitle="Tense, mysterious, and psychologically charged cinema."
-              movies={thrillerMovies.slice(0, 10)}
-              onViewMore={() => navigate("/search?section=thriller")}
-            />
+<MovieRow
+  title="Thrillers & Psychological Cinema"
+  subtitle="Tense, mysterious, and psychologically charged cinema."
+  movies={thrillerMovies.slice(0, 10)}
+  onViewMore={() => navigate("/discover/thriller")}
+/>
+
+<MovieRow
+  title="Global Hidden Gems"
+  subtitle="Less obvious films with strong ratings and lower mainstream popularity."
+  movies={hiddenGemMovies.slice(0, 10)}
+  onViewMore={() => navigate("/discover/global-hidden-gems")}
+/>
 
             <MovieRow
               title="Global Hidden Gems"
               subtitle="Less obvious films with strong ratings and lower mainstream popularity."
               movies={hiddenGemMovies.slice(0, 10)}
-              onViewMore={() => navigate("/search?section=global-hidden-gems")}
+              onViewMore={() => navigate("/discover/global-hidden-gems")}
             />
           </>
         )}

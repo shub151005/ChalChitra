@@ -280,7 +280,7 @@ def available_languages():
 @router.get("/discover/award-winning")
 def award_winning_movies(
     page: int = 1,
-    limit: int = Query(default=20, ge=1, le=40),
+    limit: int = Query(default=50, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
     return get_award_winning_acclaimed_movies(
@@ -293,7 +293,7 @@ def award_winning_movies(
 @router.get("/discover/festival-favorites")
 def festival_favorite_movies(
     page: int = 1,
-    limit: int = Query(default=20, ge=1, le=40),
+    limit: int = Query(default=50, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
     return get_festival_favorite_movies(
@@ -306,7 +306,7 @@ def festival_favorite_movies(
 @router.get("/discover/global-hidden-gems")
 def global_hidden_gem_movies(
     page: int = 1,
-    limit: int = Query(default=20, ge=1, le=40),
+    limit: int = Query(default=50, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
     return get_global_hidden_gem_movies(
@@ -320,7 +320,7 @@ def global_hidden_gem_movies(
 def genre_movies(
     genre_name: str,
     page: int = 1,
-    limit: int = Query(default=20, ge=1, le=40),
+    limit: int = Query(default=50, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
     return get_movies_by_genre_name(

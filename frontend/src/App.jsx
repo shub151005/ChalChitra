@@ -13,6 +13,7 @@ import Watchlist from "./pages/Watchlist";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import DiscoveryList from "./pages/DiscoveryList";
 
 const App = () => {
   return (
@@ -27,6 +28,23 @@ const App = () => {
             <Route
   path="/movie/:tmdbId/recommendations"
   element={<MovieRecommendationList type="recommendations" />}
+/>
+
+<Route path="/discover/trending" element={<DiscoveryList type="trending" />} />
+<Route path="/discover/top-rated" element={<DiscoveryList type="top-rated" />} />
+<Route
+  path="/discover/award-winning"
+  element={<DiscoveryList type="award-winning" />}
+/>
+<Route
+  path="/discover/festival-favorites"
+  element={<DiscoveryList type="festival-favorites" />}
+/>
+<Route path="/discover/romance" element={<DiscoveryList type="romance" />} />
+<Route path="/discover/thriller" element={<DiscoveryList type="thriller" />} />
+<Route
+  path="/discover/global-hidden-gems"
+  element={<DiscoveryList type="global-hidden-gems" />}
 />
 
 <Route
