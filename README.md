@@ -1,12 +1,4 @@
-Yes partner. Create/replace this file in project root:
 
-```text
-README.md
-```
-
-Copy-paste this full README:
-
-````md
 # ChalChitra — Global Cinema Discovery & Hybrid Movie Recommendation Platform
 
 ChalChitra is a full-stack movie discovery and recommendation platform built for global cinema exploration. It helps users discover movies through search, genres, directors, actors, ratings, reviews, watchlist behavior, hidden gems, and hybrid recommendation logic.
@@ -30,23 +22,7 @@ Most movie platforms recommend films mainly through popularity, trending lists, 
 
 The result is a platform that can recommend both obvious similar films and less mainstream hidden gems.
 
----
 
-## Live Demo
-
-Frontend:
-
-```txt
-Coming soon
-````
-
-Backend:
-
-```txt
-Coming soon
-```
-
----
 
 ## Features
 
