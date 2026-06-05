@@ -27,16 +27,39 @@ const Home = () => {
   const [hiddenGemMovies, setHiddenGemMovies] = useState([]);
 
   const [homeLoading, setHomeLoading] = useState(true);
+  const [secondaryLoading, setSecondaryLoading] = useState(false);
   const [homeError, setHomeError] = useState("");
 
   const loadHomeMovies = async () => {
     try {
       setHomeLoading(true);
+      setSecondaryLoading(false);
       setHomeError("");
 
-      const results = await Promise.allSettled([
+      const criticalResults = await Promise.allSettled([
         getTrendingMovies(1),
-        getTopRatedMovies(1),
+        getTopRatedMovies(1)
+      ]);
+
+      if (criticalResults[0].status === "fulfilled") {
+        setTrendingMovies(criticalResults[0].value?.results || []);
+      }
+
+      if (criticalResults[1].status === "fulfilled") {
+        setTopRatedMovies(criticalResults[1].value?.results || []);
+      }
+
+      if (
+        criticalResults[0].status !== "fulfilled" &&
+        criticalResults[1].status !== "fulfilled"
+      ) {
+        setHomeError("Could not load homepage movies. Make sure backend is running.");
+      }
+
+      setHomeLoading(false);
+      setSecondaryLoading(true);
+
+      const secondaryResults = await Promise.allSettled([
         getAwardWinningMovies(1, 10),
         getFestivalFavoriteMovies(1, 10),
         getGenreMovies("romance", 1, 10),
@@ -45,25 +68,24 @@ const Home = () => {
       ]);
 
       const getResults = (index) => {
-        if (results[index].status !== "fulfilled") {
+        if (secondaryResults[index].status !== "fulfilled") {
           return [];
         }
 
-        return results[index].value?.results || [];
+        return secondaryResults[index].value?.results || [];
       };
 
-      setTrendingMovies(getResults(0));
-      setTopRatedMovies(getResults(1));
-      setAwardMovies(getResults(2));
-      setFestivalMovies(getResults(3));
-      setRomanceMovies(getResults(4));
-      setThrillerMovies(getResults(5));
-      setHiddenGemMovies(getResults(6));
+      setAwardMovies(getResults(0));
+      setFestivalMovies(getResults(1));
+      setRomanceMovies(getResults(2));
+      setThrillerMovies(getResults(3));
+      setHiddenGemMovies(getResults(4));
     } catch (err) {
       console.error("Homepage loading failed:", err);
-      setHomeError("Could not load homepage movies.");
-    } finally {
+      setHomeError("Could not load homepage movies. Make sure backend is running.");
       setHomeLoading(false);
+    } finally {
+      setSecondaryLoading(false);
     }
   };
 
@@ -213,7 +235,7 @@ const Home = () => {
           </div>
         )}
 
-        {!homeLoading && !homeError && (
+        {!homeError && (
           <div className="space-y-2">
             <MovieRow
               title="Trending Worldwide"
@@ -277,6 +299,12 @@ const Home = () => {
               showCount
               onViewMore={() => navigate("/discover/global-hidden-gems")}
             />
+
+            {secondaryLoading && (
+              <div className="py-6 text-center text-sm text-cinemaDim">
+                Loading more discovery rows...
+              </div>
+            )}
           </div>
         )}
       </section>
