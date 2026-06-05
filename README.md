@@ -22,7 +22,23 @@ Most movie platforms recommend films mainly through popularity, trending lists, 
 
 The result is a platform that can recommend both obvious similar films and less mainstream hidden gems.
 
+---
 
+## Live Demo
+
+Frontend:
+
+```txt
+https://chal-chitra-eta.vercel.app
+````
+
+Backend:
+
+```txt
+https://chalchitra-2vov.onrender.com
+```
+
+---
 
 ## Features
 
